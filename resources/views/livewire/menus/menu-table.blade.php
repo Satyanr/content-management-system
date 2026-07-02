@@ -7,20 +7,12 @@
             class="w-full md:w-80 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
         >
 
-        <button
-            type="button"
-            wire:click="openModal"
-            class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-5 py-2.5"
-        >
+        <x-cms.button wire:click="openModal">
             Add Menu
-        </button>
+        </x-cms.button>
     </div>
 
-    @if (session()->has('success'))
-        <div class="mb-4 p-4 text-sm text-green-800 rounded-lg bg-green-50">
-            {{ session('success') }}
-        </div>
-    @endif
+    <x-cms.alert />
 
     <div class="relative overflow-x-auto bg-white border border-gray-200 rounded-lg shadow-sm">
         <table class="w-full text-sm text-left text-gray-500">
@@ -99,98 +91,53 @@
         {{ $menus->links() }}
     </div>
 
-    @if ($showModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50">
-            <div class="w-full max-w-2xl bg-white rounded-lg shadow">
-                <div class="flex items-center justify-between p-4 border-b">
-                    <h3 class="text-lg font-semibold text-gray-900">
-                        {{ $isEdit ? 'Edit Menu' : 'Add Menu' }}
-                    </h3>
+    <x-cms.modal :show="$showModal" :title="$isEdit ? 'Edit Menu' : 'Add Menu'" maxWidth="max-w-2xl">
+        <x-slot name="close">
+            <button type="button" wire:click="closeModal" class="text-gray-400 hover:text-gray-900">
+                ✕
+            </button>
+        </x-slot>
 
-                    <button type="button" wire:click="closeModal" class="text-gray-400 hover:text-gray-900">
-                        ✕
-                    </button>
+        <form wire:submit.prevent="save">
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-cms.select label="Parent Menu" name="parent_id" wire:model="parent_id">
+                    <option value="">Root Menu</option>
+                    @foreach ($parentMenus as $parent)
+                        @if ($parent->id !== $menuId)
+                            <option value="{{ $parent->id }}">{{ $parent->title }}</option>
+                        @endif
+                    @endforeach
+                </x-cms.select>
+
+                <x-cms.input label="Title" name="title" wire:model="title" />
+
+                <x-cms.input label="Route Name" name="route" wire:model="route" placeholder="admin.dashboard" />
+
+                <x-cms.input label="Icon" name="icon" wire:model="icon" placeholder="home" />
+
+                <x-cms.select label="Permission" name="permission" wire:model="permission">
+                    <option value="">No Permission</option>
+                    @foreach ($permissions as $item)
+                        <option value="{{ $item->name }}">{{ $item->name }}</option>
+                    @endforeach
+                </x-cms.select>
+
+                <x-cms.input label="Sort Order" name="sort_order" type="number" wire:model="sort_order" />
+
+                <div class="md:col-span-2">
+                    <x-cms.checkbox label="Active" wire:model="is_active" />
                 </div>
-
-                <form wire:submit.prevent="save">
-                    <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-900">Parent Menu</label>
-                            <select wire:model="parent_id"
-                                    class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                                <option value="">Root Menu</option>
-                                @foreach ($parentMenus as $parent)
-                                    @if ($parent->id !== $menuId)
-                                        <option value="{{ $parent->id }}">{{ $parent->title }}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                            @error('parent_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-900">Title</label>
-                            <input type="text" wire:model="title"
-                                   class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                            @error('title') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-900">Route Name</label>
-                            <input type="text" wire:model="route" placeholder="admin.dashboard"
-                                   class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                            @error('route') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-900">Icon</label>
-                            <input type="text" wire:model="icon" placeholder="home"
-                                   class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                            @error('icon') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-900">Permission</label>
-                            <select wire:model="permission"
-                                    class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                                <option value="">No Permission</option>
-                                @foreach ($permissions as $item)
-                                    <option value="{{ $item->name }}">{{ $item->name }}</option>
-                                @endforeach
-                            </select>
-                            @error('permission') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label class="block mb-2 text-sm font-medium text-gray-900">Sort Order</label>
-                            <input type="number" wire:model="sort_order"
-                                   class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                            @error('sort_order') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label class="flex items-center gap-2 text-sm text-gray-700">
-                                <input type="checkbox"
-                                       wire:model="is_active"
-                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                Active
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end gap-2 p-4 border-t">
-                        <button type="button" wire:click="closeModal"
-                                class="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">
-                            Cancel
-                        </button>
-
-                        <button type="submit"
-                                class="px-5 py-2.5 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800">
-                            Save
-                        </button>
-                    </div>
-                </form>
             </div>
-        </div>
-    @endif
+
+            <div class="flex justify-end gap-2 p-4 border-t">
+                <x-cms.button color="secondary" wire:click="closeModal">
+                    Cancel
+                </x-cms.button>
+
+                <x-cms.button type="submit">
+                    Save
+                </x-cms.button>
+            </div>
+        </form>
+    </x-cms.modal>
 </div>
