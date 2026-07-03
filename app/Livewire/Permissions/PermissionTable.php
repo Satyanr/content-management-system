@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
+use App\Services\PermissionService;
 
 class PermissionTable extends Component
 {
@@ -50,34 +51,36 @@ class PermissionTable extends Component
         $this->showModal = true;
     }
 
-    public function save(): void
+    public function save(PermissionService $permissionService): void
     {
         $this->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('permissions', 'name')->where('guard_name', 'web')->ignore($this->permissionId)],
         ]);
 
-        Permission::updateOrCreate(
-            ['id' => $this->permissionId],
-            [
-                'name' => $this->name,
-                'guard_name' => 'web',
-            ],
-        );
+        $data = [
+            'name' => $this->name,
+        ];
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        $message = $this->isEdit ? 'Permission updated successfully.' : 'Permission created successfully.';
+
+        if ($this->isEdit) {
+            $permission = Permission::findOrFail($this->permissionId);
+            $permissionService->update($permission, $data);
+        } else {
+            $permissionService->create($data);
+        }
 
         $this->closeModal();
         $this->resetForm();
 
-        session()->flash('success', $this->isEdit ? 'Permission updated successfully.' : 'Permission created successfully.');
+        session()->flash('success', $message);
     }
 
-    public function delete(int $id): void
+    public function delete(int $id, PermissionService $permissionService): void
     {
         $permission = Permission::findOrFail($id);
-        $permission->delete();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        $permissionService->delete($permission);
 
         session()->flash('success', 'Permission deleted successfully.');
     }

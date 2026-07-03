@@ -7,21 +7,25 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use App\Services\UserService;
+use App\Livewire\Traits\HasModal;
+use App\Livewire\Traits\HasFlashMessage;
+use App\Models\Company;
 
 class UserTable extends Component
 {
     use WithPagination;
+    use HasModal;
+    use HasFlashMessage;
 
     public string $search = '';
-    public bool $showModal = false;
 
     public string $name = '';
     public string $email = '';
     public string $password = '';
     public string $role = '';
     public ?int $userId = null;
-    public bool $isEdit = false;
+    public ?int $company_id = null;
 
     public function updatingSearch(): void
     {
@@ -35,23 +39,19 @@ class UserTable extends Component
         $this->showModal = true;
     }
 
-    public function closeModal(): void
-    {
-        $this->showModal = false;
-    }
-
     public function resetForm(): void
     {
-        $this->reset(['userId', 'name', 'email', 'password', 'role', 'isEdit']);
+        $this->reset(['userId', 'name', 'email', 'company_id', 'password', 'role', 'isEdit']);
         $this->resetValidation();
     }
 
-    public function save(): void
+    public function save(UserService $userService): void
     {
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email,' . $this->userId],
             'role' => ['required', 'exists:roles,name'],
+            'company_id' => ['required', 'exists:companies,id'],
         ];
 
         if (!$this->isEdit) {
@@ -62,22 +62,27 @@ class UserTable extends Component
 
         $this->validate($rules);
 
-        $user = $this->isEdit ? User::findOrFail($this->userId) : new User();
+        $data = [
+            'name' => $this->name,
+            'email' => $this->email,
+            'company_id' => $this->company_id,
+            'password' => $this->password,
+            'role' => $this->role,
+        ];
 
-        $user->name = $this->name;
-        $user->email = $this->email;
-
-        if ($this->password) {
-            $user->password = Hash::make($this->password);
+        if ($this->isEdit) {
+            $user = User::findOrFail($this->userId);
+            $userService->update($user, $data);
+        } else {
+            $userService->create($data);
         }
 
-        $user->save();
-        $user->syncRoles([$this->role]);
+        $message = $this->isEdit ? 'User updated successfully.' : 'User created successfully.';
 
         $this->closeModal();
         $this->resetForm();
 
-        session()->flash('success', $this->isEdit ? 'User updated successfully.' : 'User created successfully.');
+        $this->success($message);
     }
 
     public function edit(int $id): void
@@ -87,41 +92,46 @@ class UserTable extends Component
         $this->userId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
+        $this->company_id = $user->company_id;
         $this->password = '';
         $this->role = $user->roles->first()?->name ?? '';
         $this->isEdit = true;
         $this->showModal = true;
     }
 
-    public function delete(int $id): void
+    public function delete(int $id, UserService $userService): void
     {
         $user = User::findOrFail($id);
 
         if ($user->id === Auth::id()) {
-            session()->flash('error', 'You cannot delete your own account.');
+            $this->error('You cannot delete your own account.');
             return;
         }
 
-        $user->delete();
+        $userService->delete($user);
 
-        session()->flash('success', 'User deleted successfully.');
+        $this->success('User deleted successfully.');
     }
 
     public function render()
     {
         $users = User::query()
-            ->with('roles')
+            ->with(['roles', 'company'])
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', '%' . $this->search . '%')->orWhere('email', 'like', '%' . $this->search . '%');
                 });
             })
-            ->latest()
+            ->orderBy('created_at', 'desc')
             ->paginate(10);
+
+        $roles = Role::query()->orderBy('name', 'asc')->get();
+        $companies = Company::query()->orderBy('name', 'asc')->get();
 
         return view('livewire.users.user-table', [
             'users' => $users,
-            'roles' => Role::orderBy('name')->get(),
+            'roles' => $roles,
+            'companies' => $companies,
         ]);
     }
 }

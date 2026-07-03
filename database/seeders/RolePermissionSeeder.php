@@ -13,22 +13,17 @@ class RolePermissionSeeder extends Seeder
     {
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $permissions = [
-            'dashboard.view',
+        $company = \App\Models\Company::firstOrCreate(
+            ['code' => 'MAIN'],
+            [
+                'name' => 'Main Company',
+                'email' => 'admin@cms.test',
+                'phone' => null,
+                'is_active' => true,
+            ],
+        );
 
-            'users.view',
-            'users.create',
-            'users.edit',
-            'users.delete',
-
-            'roles.view',
-            'roles.create',
-            'roles.edit',
-            'roles.delete',
-
-            'settings.view',
-            'settings.edit',
-        ];
+        $permissions = ['dashboard.view', 'users.view', 'users.create', 'users.edit', 'users.delete', 'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'settings.view', 'settings.edit'];
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
@@ -40,25 +35,17 @@ class RolePermissionSeeder extends Seeder
 
         $superAdmin->syncPermissions(Permission::all());
 
-        $admin->syncPermissions([
-            'dashboard.view',
-            'users.view',
-            'users.create',
-            'users.edit',
-            'roles.view',
-            'settings.view',
-        ]);
+        $admin->syncPermissions(['dashboard.view', 'users.view', 'users.create', 'users.edit', 'roles.view', 'settings.view']);
 
-        $operator->syncPermissions([
-            'dashboard.view',
-        ]);
+        $operator->syncPermissions(['dashboard.view']);
 
         $user = User::firstOrCreate(
             ['email' => 'admin@cms.test'],
             [
+                'company_id' => $company->id,
                 'name' => 'Super Admin',
                 'password' => bcrypt('password'),
-            ]
+            ],
         );
 
         $user->assignRole('super-admin');

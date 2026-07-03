@@ -6,6 +6,7 @@ use App\Models\Menu;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Permission;
+use App\Services\MenuService;
 
 class MenuTable extends Component
 {
@@ -66,10 +67,8 @@ class MenuTable extends Component
         $this->showModal = true;
     }
 
-    public function save(): void
+    public function save(MenuService $menuService): void
     {
-        $message = $this->isEdit ? 'Menu updated successfully.' : 'Menu created successfully.';
-
         $this->validate([
             'parent_id' => ['nullable', 'exists:menus,id'],
             'title' => ['required', 'string', 'max:255'],
@@ -80,18 +79,24 @@ class MenuTable extends Component
             'is_active' => ['boolean'],
         ]);
 
-        Menu::updateOrCreate(
-            ['id' => $this->menuId],
-            [
-                'parent_id' => $this->parent_id,
-                'title' => $this->title,
-                'route' => $this->route,
-                'icon' => $this->icon,
-                'permission' => $this->permission,
-                'sort_order' => $this->sort_order,
-                'is_active' => $this->is_active,
-            ],
-        );
+        $data = [
+            'parent_id' => $this->parent_id,
+            'title' => $this->title,
+            'route' => $this->route,
+            'icon' => $this->icon,
+            'permission' => $this->permission,
+            'sort_order' => $this->sort_order,
+            'is_active' => $this->is_active,
+        ];
+
+        $message = $this->isEdit ? 'Menu updated successfully.' : 'Menu created successfully.';
+
+        if ($this->isEdit) {
+            $menu = Menu::findOrFail($this->menuId);
+            $menuService->update($menu, $data);
+        } else {
+            $menuService->create($data);
+        }
 
         $this->closeModal();
         $this->resetForm();
@@ -99,9 +104,11 @@ class MenuTable extends Component
         session()->flash('success', $message);
     }
 
-    public function delete(int $id): void
+    public function delete(int $id, MenuService $menuService): void
     {
-        Menu::findOrFail($id)->delete();
+        $menu = Menu::findOrFail($id);
+
+        $menuService->delete($menu);
 
         session()->flash('success', 'Menu deleted successfully.');
     }

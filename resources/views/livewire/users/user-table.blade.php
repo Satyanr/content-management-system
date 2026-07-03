@@ -15,6 +15,7 @@
             <x-cms.table-header-row>
                 <x-cms.table-cell header>Name</x-cms.table-cell>
                 <x-cms.table-cell header>Email</x-cms.table-cell>
+                <x-cms.table-cell header>Company</x-cms.table-cell>
                 <x-cms.table-cell header>Roles</x-cms.table-cell>
                 <x-cms.table-cell header>Created</x-cms.table-cell>
                 <x-cms.table-cell header align="right">Action</x-cms.table-cell>
@@ -30,6 +31,10 @@
 
                     <x-cms.table-cell>
                         {{ $user->email }}
+                    </x-cms.table-cell>
+
+                    <x-cms.table-cell>
+                        {{ $user->company?->name ?? '-' }}
                     </x-cms.table-cell>
 
                     <x-cms.table-cell>
@@ -51,11 +56,8 @@
                             Edit
                         </x-cms.action-link>
 
-                        <x-cms.action-link
-                            color="red"
-                            wire:click="delete({{ $user->id }})"
-                            wire:confirm="Are you sure you want to delete this user?"
-                        >
+                        <x-cms.action-link color="red" wire:click="delete({{ $user->id }})"
+                            wire:confirm="Are you sure you want to delete this user?">
                             Delete
                         </x-cms.action-link>
                     </x-cms.table-cell>
@@ -82,6 +84,13 @@
                 <x-cms.input label="Name" name="name" wire:model="name" />
 
                 <x-cms.input label="Email" name="email" type="email" wire:model="email" />
+
+                <x-cms.select label="Company" name="company_id" wire:model="company_id">
+                    <option value="">Select Company</option>
+                    @foreach ($companies as $company)
+                        <option value="{{ $company->id }}">{{ $company->name }}</option>
+                    @endforeach
+                </x-cms.select>
 
                 <x-cms.input label="{{ $isEdit ? 'Password (leave blank if unchanged)' : 'Password' }}" name="password"
                     type="password" wire:model="password" />

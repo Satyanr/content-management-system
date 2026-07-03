@@ -7,6 +7,7 @@ use Livewire\WithPagination;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
+use App\Services\RoleService;
 
 class RoleTable extends Component
 {
@@ -54,29 +55,33 @@ class RoleTable extends Component
         $this->showModal = true;
     }
 
-    public function save(): void
+    public function save(RoleService $roleService): void
     {
         $this->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('roles', 'name')->where('guard_name', 'web')->ignore($this->roleId)],
         ]);
 
-        $role = Role::updateOrCreate(
-            ['id' => $this->roleId],
-            [
-                'name' => $this->name,
-                'guard_name' => 'web',
-            ],
-        );
+        $data = [
+            'name' => $this->name,
+            'permissions' => $this->selectedPermissions,
+        ];
 
-        $role->syncPermissions($this->selectedPermissions);
+        $message = $this->isEdit ? 'Role updated successfully.' : 'Role created successfully.';
+
+        if ($this->isEdit) {
+            $role = Role::findOrFail($this->roleId);
+            $roleService->update($role, $data);
+        } else {
+            $roleService->create($data);
+        }
 
         $this->closeModal();
         $this->resetForm();
 
-        session()->flash('success', $this->isEdit ? 'Role updated successfully.' : 'Role created successfully.');
+        session()->flash('success', $message);
     }
 
-    public function delete(int $id): void
+    public function delete(int $id, RoleService $roleService): void
     {
         $role = Role::findOrFail($id);
 
@@ -85,7 +90,7 @@ class RoleTable extends Component
             return;
         }
 
-        $role->delete();
+        $roleService->delete($role);
 
         session()->flash('success', 'Role deleted successfully.');
     }
