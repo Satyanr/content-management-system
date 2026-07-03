@@ -14,78 +14,67 @@
 
     <x-cms.alert />
 
-    <div class="relative overflow-x-auto bg-white border border-gray-200 rounded-lg shadow-sm">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3">Title</th>
-                    <th class="px-6 py-3">Parent</th>
-                    <th class="px-6 py-3">Route</th>
-                    <th class="px-6 py-3">Permission</th>
-                    <th class="px-6 py-3">Sort</th>
-                    <th class="px-6 py-3">Status</th>
-                    <th class="px-6 py-3 text-right">Action</th>
-                </tr>
-            </thead>
+    <x-cms.table>
+        <x-cms.table-header>
+            <x-cms.table-header-row>
+                <x-cms.table-cell header>Title</x-cms.table-cell>
+                <x-cms.table-cell header>Parent</x-cms.table-cell>
+                <x-cms.table-cell header>Route</x-cms.table-cell>
+                <x-cms.table-cell header>Permission</x-cms.table-cell>
+                <x-cms.table-cell header>Sort</x-cms.table-cell>
+                <x-cms.table-cell header>Status</x-cms.table-cell>
+                <x-cms.table-cell header align="right">Action</x-cms.table-cell>
+            </x-cms.table-header-row>
+        </x-cms.table-header>
 
-            <tbody>
-                @forelse ($menus as $menu)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900">
-                            {{ $menu->title }}
-                        </td>
+        <tbody>
+            @forelse ($menus as $menu)
+                <x-cms.table-row>
+                    <x-cms.table-cell class="font-medium text-gray-900">
+                        {{ $menu->title }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4">
-                            {{ $menu->parent?->title ?? '-' }}
-                        </td>
+                    <x-cms.table-cell>
+                        {{ $menu->parent?->title ?? '-' }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4">
-                            {{ $menu->route ?? '-' }}
-                        </td>
+                    <x-cms.table-cell>
+                        {{ $menu->route ?? '-' }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4">
-                            {{ $menu->permission ?? '-' }}
-                        </td>
+                    <x-cms.table-cell>
+                        {{ $menu->permission ?? '-' }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4">
-                            {{ $menu->sort_order }}
-                        </td>
+                    <x-cms.table-cell>
+                        {{ $menu->sort_order }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4">
-                            @if ($menu->is_active)
-                                <span class="px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded">
-                                    Active
-                                </span>
-                            @else
-                                <span class="px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded">
-                                    Inactive
-                                </span>
-                            @endif
-                        </td>
+                    <x-cms.table-cell>
+                        <x-cms.badge :color="$menu->is_active ? 'green' : 'red'">
+                            {{ $menu->is_active ? 'Active' : 'Inactive' }}
+                        </x-cms.badge>
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4 text-right space-x-2">
-                            <button wire:click="edit({{ $menu->id }})"
-                                    class="font-medium text-blue-600 hover:underline">
-                                Edit
-                            </button>
+                    <x-cms.table-cell align="right" class="space-x-2">
+                        <x-cms.action-link wire:click="edit({{ $menu->id }})">
+                            Edit
+                        </x-cms.action-link>
 
-                            <button wire:click="delete({{ $menu->id }})"
-                                    wire:confirm="Are you sure you want to delete this menu?"
-                                    class="font-medium text-red-600 hover:underline">
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" class="px-6 py-6 text-center text-gray-500">
-                            No menus found.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                        <x-cms.action-link
+                            color="red"
+                            wire:click="delete({{ $menu->id }})"
+                            wire:confirm="Are you sure you want to delete this menu?"
+                        >
+                            Delete
+                        </x-cms.action-link>
+                    </x-cms.table-cell>
+                </x-cms.table-row>
+            @empty
+                <x-cms.empty-state colspan="7" message="No menus found." />
+            @endforelse
+        </tbody>
+    </x-cms.table>
 
     <div class="mt-4">
         {{ $menus->links() }}
@@ -94,7 +83,7 @@
     <x-cms.modal :show="$showModal" :title="$isEdit ? 'Edit Menu' : 'Add Menu'" maxWidth="max-w-2xl">
         <x-slot name="close">
             <button type="button" wire:click="closeModal" class="text-gray-400 hover:text-gray-900">
-                ✕
+                &times;
             </button>
         </x-slot>
 

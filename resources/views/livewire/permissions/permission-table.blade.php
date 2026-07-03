@@ -10,55 +10,50 @@
 
     <x-cms.alert />
 
-    <div class="relative overflow-x-auto bg-white border border-gray-200 rounded-lg shadow-sm">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3">Permission Name</th>
-                    <th class="px-6 py-3">Guard</th>
-                    <th class="px-6 py-3">Created</th>
-                    <th class="px-6 py-3 text-right">Action</th>
-                </tr>
-            </thead>
+    <x-cms.table>
+        <x-cms.table-header>
+            <x-cms.table-header-row>
+                <x-cms.table-cell header>Permission Name</x-cms.table-cell>
+                <x-cms.table-cell header>Guard</x-cms.table-cell>
+                <x-cms.table-cell header>Created</x-cms.table-cell>
+                <x-cms.table-cell header align="right">Action</x-cms.table-cell>
+            </x-cms.table-header-row>
+        </x-cms.table-header>
 
-            <tbody>
-                @forelse ($permissions as $permission)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900">
-                            {{ $permission->name }}
-                        </td>
+        <tbody>
+            @forelse ($permissions as $permission)
+                <x-cms.table-row>
+                    <x-cms.table-cell class="font-medium text-gray-900">
+                        {{ $permission->name }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4">
-                            {{ $permission->guard_name }}
-                        </td>
+                    <x-cms.table-cell>
+                        {{ $permission->guard_name }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4">
-                            {{ $permission->created_at->format('d M Y') }}
-                        </td>
+                    <x-cms.table-cell>
+                        {{ $permission->created_at->format('d M Y') }}
+                    </x-cms.table-cell>
 
-                        <td class="px-6 py-4 text-right space-x-2">
-                            <button wire:click="edit({{ $permission->id }})"
-                                class="font-medium text-blue-600 hover:underline">
-                                Edit
-                            </button>
+                    <x-cms.table-cell align="right" class="space-x-2">
+                        <x-cms.action-link wire:click="edit({{ $permission->id }})">
+                            Edit
+                        </x-cms.action-link>
 
-                            <button wire:click="delete({{ $permission->id }})"
-                                wire:confirm="Are you sure you want to delete this permission?"
-                                class="font-medium text-red-600 hover:underline">
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="px-6 py-6 text-center text-gray-500">
-                            No permissions found.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                        <x-cms.action-link
+                            color="red"
+                            wire:click="delete({{ $permission->id }})"
+                            wire:confirm="Are you sure you want to delete this permission?"
+                        >
+                            Delete
+                        </x-cms.action-link>
+                    </x-cms.table-cell>
+                </x-cms.table-row>
+            @empty
+                <x-cms.empty-state colspan="4" message="No permissions found." />
+            @endforelse
+        </tbody>
+    </x-cms.table>
 
     <div class="mt-4">
         {{ $permissions->links() }}
@@ -67,7 +62,7 @@
     <x-cms.modal :show="$showModal" :title="$isEdit ? 'Edit Permission' : 'Add Permission'" maxWidth="max-w-md">
         <x-slot name="close">
             <button type="button" wire:click="closeModal" class="text-gray-400 hover:text-gray-900">
-                ✕
+                &times;
             </button>
         </x-slot>
 
