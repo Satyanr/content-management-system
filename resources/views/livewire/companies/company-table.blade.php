@@ -2,9 +2,11 @@
     <div class="mb-4 flex items-center justify-between gap-4">
         <x-cms.input wire:model.live="search" placeholder="Search companies..." class="w-full md:w-80" />
 
-        <x-cms.button wire:click="openModal">
-            Add Company
-        </x-cms.button>
+        @can('companies.create')
+            <x-cms.button wire:click="openModal">
+                Add Company
+            </x-cms.button>
+        @endcan
     </div>
 
     <x-cms.alert />
@@ -36,14 +38,18 @@
                         @endif
                     </x-cms.table-cell>
                     <x-cms.table-cell align="right" class="space-x-2">
-                        <x-cms.action-link wire:click="edit({{ $company->id }})">
-                            Edit
-                        </x-cms.action-link>
+                        @can('companies.edit')
+                            <x-cms.action-link wire:click="edit({{ $company->id }})">
+                                Edit
+                            </x-cms.action-link>
+                        @endcan
 
-                        <x-cms.action-link color="red" wire:click="delete({{ $company->id }})"
-                            wire:confirm="Are you sure you want to delete this company?">
-                            Delete
-                        </x-cms.action-link>
+                        @can('companies.delete')
+                            <x-cms.action-link color="red" wire:click="delete({{ $company->id }})"
+                                wire:confirm="Are you sure you want to delete this company?">
+                                Delete
+                            </x-cms.action-link>
+                        @endcan
                     </x-cms.table-cell>
                 </x-cms.table-row>
             @empty

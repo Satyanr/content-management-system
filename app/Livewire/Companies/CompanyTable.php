@@ -9,6 +9,7 @@ use Illuminate\Validation\Rule;
 use App\Services\CompanyService;
 use App\Livewire\Traits\HasModal;
 use App\Livewire\Traits\HasFlashMessage;
+use Illuminate\Support\Facades\Gate;
 
 class CompanyTable extends Component
 {
@@ -48,6 +49,8 @@ class CompanyTable extends Component
 
     public function edit(int $id): void
     {
+        Gate::authorize('companies.edit');
+
         $company = Company::query()->findOrFail($id);
 
         $this->companyId = $company->id;
@@ -62,6 +65,8 @@ class CompanyTable extends Component
 
     public function save(CompanyService $companyService): void
     {
+        Gate::authorize($this->isEdit ? 'companies.edit' : 'companies.create');
+
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => [
@@ -102,6 +107,8 @@ class CompanyTable extends Component
 
     public function delete(int $id, CompanyService $companyService): void
     {
+        Gate::authorize('companies.delete');
+        
         $company = Company::query()->findOrFail($id);
 
         if ($company->users()->exists()) {

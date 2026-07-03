@@ -11,6 +11,7 @@ use App\Services\UserService;
 use App\Livewire\Traits\HasModal;
 use App\Livewire\Traits\HasFlashMessage;
 use App\Models\Company;
+use Illuminate\Support\Facades\Gate;
 
 class UserTable extends Component
 {
@@ -35,6 +36,11 @@ class UserTable extends Component
     public function openModal(): void
     {
         $this->resetForm();
+
+        if (!Auth::user()?->hasRole('super-admin')) {
+            $this->company_id = Auth::user()?->company_id;
+        }
+
         $this->isEdit = false;
         $this->showModal = true;
     }
@@ -47,6 +53,8 @@ class UserTable extends Component
 
     public function save(UserService $userService): void
     {
+        Gate::authorize($this->isEdit ? 'users.edit' : 'users.create');
+
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email,' . $this->userId],
@@ -62,6 +70,10 @@ class UserTable extends Component
 
         $this->validate($rules);
 
+        if (!Auth::user()?->hasRole('super-admin') && $this->role === 'super-admin') {
+            abort(403);
+        }
+
         $data = [
             'name' => $this->name,
             'email' => $this->email,
@@ -70,14 +82,14 @@ class UserTable extends Component
             'role' => $this->role,
         ];
 
+        $message = $this->isEdit ? 'User updated successfully.' : 'User created successfully.';
+
         if ($this->isEdit) {
-            $user = User::findOrFail($this->userId);
+            $user = User::query()->findOrFail($this->userId);
             $userService->update($user, $data);
         } else {
             $userService->create($data);
         }
-
-        $message = $this->isEdit ? 'User updated successfully.' : 'User created successfully.';
 
         $this->closeModal();
         $this->resetForm();
@@ -87,7 +99,13 @@ class UserTable extends Component
 
     public function edit(int $id): void
     {
-        $user = User::with('roles')->findOrFail($id);
+        Gate::authorize('users.edit');
+
+        $user = User::query()->with('roles')->findOrFail($id);
+
+        if (!Auth::user()?->hasRole('super-admin') && $user->company_id !== Auth::user()?->company_id) {
+            abort(403);
+        }
 
         $this->userId = $user->id;
         $this->name = $user->name;
@@ -101,11 +119,16 @@ class UserTable extends Component
 
     public function delete(int $id, UserService $userService): void
     {
-        $user = User::findOrFail($id);
+        Gate::authorize('users.delete');
+        $user = User::query()->findOrFail($id);
 
         if ($user->id === Auth::id()) {
             $this->error('You cannot delete your own account.');
             return;
+        }
+
+        if (!Auth::user()?->hasRole('super-admin') && $user->company_id !== Auth::user()?->company_id) {
+            abort(403);
         }
 
         $userService->delete($user);
@@ -117,6 +140,9 @@ class UserTable extends Component
     {
         $users = User::query()
             ->with(['roles', 'company'])
+            ->when(!Auth::user()?->hasRole('super-admin'), function ($query) {
+                $query->where('company_id', Auth::user()?->company_id);
+            })
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', '%' . $this->search . '%')->orWhere('email', 'like', '%' . $this->search . '%');
@@ -125,8 +151,18 @@ class UserTable extends Component
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        $roles = Role::query()->orderBy('name', 'asc')->get();
-        $companies = Company::query()->orderBy('name', 'asc')->get();
+        $roles = Role::query()
+            ->when(!Auth::user()?->hasRole('super-admin'), function ($query) {
+                $query->where('name', '!=', 'super-admin');
+            })
+            ->orderBy('name', 'asc')
+            ->get();
+        $companies = Company::query()
+            ->when(!Auth::user()?->hasRole('super-admin'), function ($query) {
+                $query->where('id', Auth::user()?->company_id);
+            })
+            ->orderBy('name', 'asc')
+            ->get();
 
         return view('livewire.users.user-table', [
             'users' => $users,

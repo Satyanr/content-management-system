@@ -8,6 +8,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
 use App\Services\RoleService;
+use Illuminate\Support\Facades\Gate;
 
 class RoleTable extends Component
 {
@@ -46,6 +47,8 @@ class RoleTable extends Component
 
     public function edit(int $id): void
     {
+        Gate::authorize('roles.edit');
+
         $role = Role::with('permissions')->findOrFail($id);
 
         $this->roleId = $role->id;
@@ -57,6 +60,8 @@ class RoleTable extends Component
 
     public function save(RoleService $roleService): void
     {
+        Gate::authorize($this->isEdit ? 'roles.edit' : 'roles.create');
+
         $this->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('roles', 'name')->where('guard_name', 'web')->ignore($this->roleId)],
         ]);
@@ -83,7 +88,9 @@ class RoleTable extends Component
 
     public function delete(int $id, RoleService $roleService): void
     {
-        $role = Role::findOrFail($id);
+        Gate::authorize('roles.delete');
+
+        $role = Role::query()->findOrFail($id);
 
         if ($role->name === 'super-admin') {
             session()->flash('error', 'Super admin role cannot be deleted.');

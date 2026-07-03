@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Core\Services\BaseService;
 use Spatie\Permission\Models\Role;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class RoleService extends BaseService
 {
@@ -38,9 +39,11 @@ class RoleService extends BaseService
     public function delete(Role $role): void
     {
         $this->transaction(function () use ($role) {
-            Role::query()
-                ->whereKey($role->id)
-                ->delete();
+            if ($role->name === 'super-admin') {
+                throw new AuthorizationException('Super admin role cannot be deleted.');
+            }
+
+            Role::query()->whereKey($role->id)->delete();
         });
     }
 }

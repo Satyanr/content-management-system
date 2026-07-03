@@ -7,6 +7,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Spatie\Permission\Models\Permission;
 use App\Services\MenuService;
+use Illuminate\Support\Facades\Gate;
 
 class MenuTable extends Component
 {
@@ -53,7 +54,9 @@ class MenuTable extends Component
 
     public function edit(int $id): void
     {
-        $menu = Menu::findOrFail($id);
+        Gate::authorize('menus.edit');
+
+        $menu = Menu::query()->findOrFail($id);
 
         $this->menuId = $menu->id;
         $this->parent_id = $menu->parent_id;
@@ -69,6 +72,8 @@ class MenuTable extends Component
 
     public function save(MenuService $menuService): void
     {
+        Gate::authorize($this->isEdit ? 'menus.edit' : 'menus.create');
+
         $this->validate([
             'parent_id' => ['nullable', 'exists:menus,id'],
             'title' => ['required', 'string', 'max:255'],
@@ -106,7 +111,9 @@ class MenuTable extends Component
 
     public function delete(int $id, MenuService $menuService): void
     {
-        $menu = Menu::findOrFail($id);
+        Gate::authorize('menus.delete');
+
+        $menu = Menu::query()->findOrFail($id);
 
         $menuService->delete($menu);
 

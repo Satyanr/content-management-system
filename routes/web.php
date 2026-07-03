@@ -23,13 +23,13 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])
             ->middleware('permission:roles.view')
             ->name('roles.index');
         Route::get('/permissions', [PermissionController::class, 'index'])
-            ->middleware('permission:roles.view')
+            ->middleware('permission:permissions.view')
             ->name('permissions.index');
         Route::get('/menus', [MenuController::class, 'index'])
-            ->middleware('permission:settings.view')
+            ->middleware('permission:menus.view')
             ->name('menus.index');
         Route::get('/companies', [CompanyController::class, 'index'])
-            ->middleware('permission:settings.view')
+            ->middleware('permission:companies.view')
             ->name('companies.index');
     });
 

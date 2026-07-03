@@ -3,9 +3,11 @@
         <input type="text" wire:model.live="search" placeholder="Search users..."
             class="w-full md:w-80 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
 
-        <x-cms.button wire:click="openModal">
-            Add User
-        </x-cms.button>
+        @can('users.create')
+            <x-cms.button wire:click="openModal">
+                Add User
+            </x-cms.button>
+        @endcan
     </div>
 
     <x-cms.alert />
@@ -52,14 +54,18 @@
                     </x-cms.table-cell>
 
                     <x-cms.table-cell align="right" class="space-x-2">
-                        <x-cms.action-link wire:click="edit({{ $user->id }})">
-                            Edit
-                        </x-cms.action-link>
+                        @can('users.edit')
+                            <x-cms.action-link wire:click="edit({{ $user->id }})">
+                                Edit
+                            </x-cms.action-link>
+                        @endcan
 
-                        <x-cms.action-link color="red" wire:click="delete({{ $user->id }})"
-                            wire:confirm="Are you sure you want to delete this user?">
-                            Delete
-                        </x-cms.action-link>
+                        @can('users.delete')
+                            <x-cms.action-link color="red" wire:click="delete({{ $user->id }})"
+                                wire:confirm="Are you sure you want to delete this user?">
+                                Delete
+                            </x-cms.action-link>
+                        @endcan
                     </x-cms.table-cell>
                 </x-cms.table-row>
             @empty

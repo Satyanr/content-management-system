@@ -7,6 +7,7 @@ use Livewire\WithPagination;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
 use App\Services\PermissionService;
+use Illuminate\Support\Facades\Gate;
 
 class PermissionTable extends Component
 {
@@ -43,7 +44,9 @@ class PermissionTable extends Component
 
     public function edit(int $id): void
     {
-        $permission = Permission::findOrFail($id);
+        Gate::authorize('permissions.edit');
+
+        $permission = Permission::query()->findOrFail($id);
 
         $this->permissionId = $permission->id;
         $this->name = $permission->name;
@@ -53,6 +56,8 @@ class PermissionTable extends Component
 
     public function save(PermissionService $permissionService): void
     {
+        Gate::authorize($this->isEdit ? 'permissions.edit' : 'permissions.create');
+
         $this->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('permissions', 'name')->where('guard_name', 'web')->ignore($this->permissionId)],
         ]);
@@ -78,7 +83,9 @@ class PermissionTable extends Component
 
     public function delete(int $id, PermissionService $permissionService): void
     {
-        $permission = Permission::findOrFail($id);
+        Gate::authorize('permissions.delete');
+
+        $permission = Permission::query()->findOrFail($id);
 
         $permissionService->delete($permission);
 

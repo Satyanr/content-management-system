@@ -3,9 +3,11 @@
         <input type="text" wire:model.live="search" placeholder="Search roles..."
             class="w-full md:w-80 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
 
-        <x-cms.button wire:click="openModal">
-            Add Role
-        </x-cms.button>
+        @can('roles.create')
+            <x-cms.button wire:click="openModal">
+                Add Role
+            </x-cms.button>
+        @endcan
     </div>
 
     <x-cms.alert />
@@ -36,17 +38,18 @@
                     </x-cms.table-cell>
 
                     <x-cms.table-cell align="right" class="space-x-2">
-                        <x-cms.action-link wire:click="edit({{ $role->id }})">
-                            Edit
-                        </x-cms.action-link>
+                        @can('roles.edit')
+                            <x-cms.action-link wire:click="edit({{ $role->id }})">
+                                Edit
+                            </x-cms.action-link>
+                        @endcan
 
-                        <x-cms.action-link
-                            color="red"
-                            wire:click="delete({{ $role->id }})"
-                            wire:confirm="Are you sure you want to delete this role?"
-                        >
-                            Delete
-                        </x-cms.action-link>
+                        @can('roles.delete')
+                            <x-cms.action-link color="red" wire:click="delete({{ $role->id }})"
+                                wire:confirm="Are you sure you want to delete this role?">
+                                Delete
+                            </x-cms.action-link>
+                        @endcan
                     </x-cms.table-cell>
                 </x-cms.table-row>
             @empty

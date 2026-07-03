@@ -3,9 +3,11 @@
         <input type="text" wire:model.live="search" placeholder="Search permissions..."
             class="w-full md:w-80 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
 
-        <x-cms.button wire:click="openModal">
-            Add Permission
-        </x-cms.button>
+        @can('permissions.create')
+            <x-cms.button wire:click="openModal">
+                Add Permission
+            </x-cms.button>
+        @endcan
     </div>
 
     <x-cms.alert />
@@ -36,17 +38,18 @@
                     </x-cms.table-cell>
 
                     <x-cms.table-cell align="right" class="space-x-2">
-                        <x-cms.action-link wire:click="edit({{ $permission->id }})">
-                            Edit
-                        </x-cms.action-link>
+                        @can('permissions.edit')
+                            <x-cms.action-link wire:click="edit({{ $permission->id }})">
+                                Edit
+                            </x-cms.action-link>
+                        @endcan
 
-                        <x-cms.action-link
-                            color="red"
-                            wire:click="delete({{ $permission->id }})"
-                            wire:confirm="Are you sure you want to delete this permission?"
-                        >
-                            Delete
-                        </x-cms.action-link>
+                        @can('permissions.delete')
+                            <x-cms.action-link color="red" wire:click="delete({{ $permission->id }})"
+                                wire:confirm="Are you sure you want to delete this permission?">
+                                Delete
+                            </x-cms.action-link>
+                        @endcan
                     </x-cms.table-cell>
                 </x-cms.table-row>
             @empty
@@ -68,7 +71,8 @@
 
         <form wire:submit.prevent="save">
             <div class="p-4">
-                <x-cms.input label="Permission Name" name="name" wire:model="name" placeholder="example: media.view" />
+                <x-cms.input label="Permission Name" name="name" wire:model="name"
+                    placeholder="example: media.view" />
             </div>
 
             <div class="flex justify-end gap-2 p-4 border-t">
