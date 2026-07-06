@@ -144,7 +144,7 @@ class MenuSeeder extends Seeder
         Menu::query()->updateOrCreate(
             ['title' => 'Settings', 'parent_id' => null],
             [
-                'route' => null,
+                'route' => 'admin.settings.index',
                 'icon' => 'settings',
                 'permission' => 'settings.view',
                 'sort_order' => 8,

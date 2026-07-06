@@ -24,6 +24,8 @@ class UserService extends BaseService
 
             $user->assignRole($data['role']);
 
+            $this->activityLog(action: 'created', module: 'users', description: 'Created user ' . $user->email, subject: $user, newValues: $user->only(['id', 'company_id', 'name', 'email']));
+
             return $user;
         });
     }
@@ -37,6 +39,8 @@ class UserService extends BaseService
 
             $this->guardCompanyAccess($companyId);
 
+            $oldValues = $user->only(['company_id', 'name', 'email']);
+
             $user->company_id = $companyId;
             $user->name = $data['name'];
             $user->email = $data['email'];
@@ -48,6 +52,8 @@ class UserService extends BaseService
             $user->save();
             $user->syncRoles([$data['role']]);
 
+            $this->activityLog(action: 'updated', module: 'users', description: 'Updated user ' . $user->email, subject: $user, oldValues: $oldValues, newValues: $user->only(['company_id', 'name', 'email']));
+
             return $user;
         });
     }
@@ -56,6 +62,8 @@ class UserService extends BaseService
     {
         $this->transaction(function () use ($user) {
             $this->guardCompanyAccess($user->company_id);
+
+            $this->activityLog(action: 'deleted', module: 'users', description: 'Deleted user ' . $user->email, subject: $user, oldValues: $user->only(['id', 'company_id', 'name', 'email']));
 
             User::query()->whereKey($user->id)->delete();
         });

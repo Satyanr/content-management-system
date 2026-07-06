@@ -13,19 +13,16 @@
     <x-cms.alert />
 
     <x-cms.table>
-        <x-cms.table-header>
-            <x-cms.table-header-row>
-                <x-cms.table-cell header>Title</x-cms.table-cell>
-                <x-cms.table-cell header>Parent</x-cms.table-cell>
-                <x-cms.table-cell header>Route</x-cms.table-cell>
-                <x-cms.table-cell header>Permission</x-cms.table-cell>
-                <x-cms.table-cell header>Sort</x-cms.table-cell>
-                <x-cms.table-cell header>Status</x-cms.table-cell>
-                <x-cms.table-cell header align="right">Action</x-cms.table-cell>
-            </x-cms.table-header-row>
-        </x-cms.table-header>
+        <x-slot name="head">
+                <x-cms.table-header>Title</x-cms.table-header>
+                <x-cms.table-header>Parent</x-cms.table-header>
+                <x-cms.table-header>Route</x-cms.table-header>
+                <x-cms.table-header>Permission</x-cms.table-header>
+                <x-cms.table-header>Sort</x-cms.table-header>
+                <x-cms.table-header>Status</x-cms.table-header>
+                <x-cms.table-header align="right">Action</x-cms.table-header>
+        </x-slot>
 
-        <tbody>
             @forelse ($menus as $menu)
                 <x-cms.table-row>
                     <x-cms.table-cell class="font-medium text-gray-900">
@@ -72,7 +69,6 @@
             @empty
                 <x-cms.empty-state colspan="7" message="No menus found." />
             @endforelse
-        </tbody>
     </x-cms.table>
 
     <div class="mt-4">

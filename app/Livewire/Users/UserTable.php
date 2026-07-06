@@ -12,6 +12,7 @@ use App\Livewire\Traits\HasModal;
 use App\Livewire\Traits\HasFlashMessage;
 use App\Models\Company;
 use Illuminate\Support\Facades\Gate;
+use App\Services\WorkspaceService;
 
 class UserTable extends Component
 {
@@ -37,11 +38,10 @@ class UserTable extends Component
     {
         $this->resetForm();
 
-        if (!Auth::user()?->hasRole('super-admin')) {
-            $this->company_id = Auth::user()?->company_id;
-        }
+        $workspaceCompanyId = app(\App\Services\WorkspaceService::class)->companyId();
 
-        $this->isEdit = false;
+        $this->company_id = $workspaceCompanyId ?? Auth::user()?->company_id;
+
         $this->showModal = true;
     }
 
@@ -138,10 +138,12 @@ class UserTable extends Component
 
     public function render()
     {
+        $workspaceCompanyId = app(WorkspaceService::class)->companyId();
+
         $users = User::query()
             ->with(['roles', 'company'])
-            ->when(!Auth::user()?->hasRole('super-admin'), function ($query) {
-                $query->where('company_id', Auth::user()?->company_id);
+            ->when($workspaceCompanyId !== null, function ($query) use ($workspaceCompanyId) {
+                $query->where('company_id', '=', $workspaceCompanyId);
             })
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
@@ -158,8 +160,8 @@ class UserTable extends Component
             ->orderBy('name', 'asc')
             ->get();
         $companies = Company::query()
-            ->when(!Auth::user()?->hasRole('super-admin'), function ($query) {
-                $query->where('id', Auth::user()?->company_id);
+            ->when($workspaceCompanyId !== null, function ($query) use ($workspaceCompanyId) {
+                $query->where('id', '=', $workspaceCompanyId);
             })
             ->orderBy('name', 'asc')
             ->get();

@@ -13,49 +13,45 @@
     <x-cms.alert />
 
     <x-cms.table>
-        <x-cms.table-header>
-            <x-cms.table-header-row>
-                <x-cms.table-cell header>Permission Name</x-cms.table-cell>
-                <x-cms.table-cell header>Guard</x-cms.table-cell>
-                <x-cms.table-cell header>Created</x-cms.table-cell>
-                <x-cms.table-cell header align="right">Action</x-cms.table-cell>
-            </x-cms.table-header-row>
-        </x-cms.table-header>
+        <x-slot name="head">
+            <x-cms.table-header>Permission Name</x-cms.table-header>
+            <x-cms.table-header>Guard</x-cms.table-header>
+            <x-cms.table-header>Created</x-cms.table-header>
+            <x-cms.table-header align="right">Action</x-cms.table-header>
+        </x-slot>
 
-        <tbody>
-            @forelse ($permissions as $permission)
-                <x-cms.table-row>
-                    <x-cms.table-cell class="font-medium text-gray-900">
-                        {{ $permission->name }}
-                    </x-cms.table-cell>
+        @forelse ($permissions as $permission)
+            <x-cms.table-row>
+                <x-cms.table-cell class="font-medium text-gray-900">
+                    {{ $permission->name }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        {{ $permission->guard_name }}
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    {{ $permission->guard_name }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        {{ $permission->created_at->format('d M Y') }}
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    {{ $permission->created_at->format('d M Y') }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell align="right" class="space-x-2">
-                        @can('permissions.edit')
-                            <x-cms.action-link wire:click="edit({{ $permission->id }})">
-                                Edit
-                            </x-cms.action-link>
-                        @endcan
+                <x-cms.table-cell align="right" class="space-x-2">
+                    @can('permissions.edit')
+                        <x-cms.action-link wire:click="edit({{ $permission->id }})">
+                            Edit
+                        </x-cms.action-link>
+                    @endcan
 
-                        @can('permissions.delete')
-                            <x-cms.action-link color="red" wire:click="delete({{ $permission->id }})"
-                                wire:confirm="Are you sure you want to delete this permission?">
-                                Delete
-                            </x-cms.action-link>
-                        @endcan
-                    </x-cms.table-cell>
-                </x-cms.table-row>
-            @empty
-                <x-cms.empty-state colspan="4" message="No permissions found." />
-            @endforelse
-        </tbody>
+                    @can('permissions.delete')
+                        <x-cms.action-link color="red" wire:click="delete({{ $permission->id }})"
+                            wire:confirm="Are you sure you want to delete this permission?">
+                            Delete
+                        </x-cms.action-link>
+                    @endcan
+                </x-cms.table-cell>
+            </x-cms.table-row>
+        @empty
+            <x-cms.empty-state colspan="4" message="No permissions found." />
+        @endforelse
     </x-cms.table>
 
     <div class="mt-4">

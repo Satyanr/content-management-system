@@ -12,50 +12,48 @@
     <x-cms.alert />
 
     <x-cms.table>
-        <x-cms.table-header>
+        <x-slot name="head">
             <tr>
-                <x-cms.table-cell header>Name</x-cms.table-cell>
-                <x-cms.table-cell header>Code</x-cms.table-cell>
-                <x-cms.table-cell header>Email</x-cms.table-cell>
-                <x-cms.table-cell header>Phone</x-cms.table-cell>
-                <x-cms.table-cell header>Status</x-cms.table-cell>
-                <x-cms.table-cell header align="right">Action</x-cms.table-cell>
+                <x-cms.table-header>Name</x-cms.table-header>
+                <x-cms.table-header>Code</x-cms.table-header>
+                <x-cms.table-header>Email</x-cms.table-header>
+                <x-cms.table-header>Phone</x-cms.table-header>
+                <x-cms.table-header>Status</x-cms.table-header>
+                <x-cms.table-header align="right">Action</x-cms.table-header>
             </tr>
-        </x-cms.table-header>
+        </x-slot>
 
-        <tbody>
-            @forelse ($companies as $company)
-                <x-cms.table-row>
-                    <x-cms.table-cell>{{ $company->name }}</x-cms.table-cell>
-                    <x-cms.table-cell>{{ $company->code }}</x-cms.table-cell>
-                    <x-cms.table-cell>{{ $company->email ?? '-' }}</x-cms.table-cell>
-                    <x-cms.table-cell>{{ $company->phone ?? '-' }}</x-cms.table-cell>
-                    <x-cms.table-cell>
-                        @if ($company->is_active)
-                            <x-cms.badge color="green">Active</x-cms.badge>
-                        @else
-                            <x-cms.badge color="red">Inactive</x-cms.badge>
-                        @endif
-                    </x-cms.table-cell>
-                    <x-cms.table-cell align="right" class="space-x-2">
-                        @can('companies.edit')
-                            <x-cms.action-link wire:click="edit({{ $company->id }})">
-                                Edit
-                            </x-cms.action-link>
-                        @endcan
+        @forelse ($companies as $company)
+            <x-cms.table-row>
+                <x-cms.table-cell>{{ $company->name }}</x-cms.table-cell>
+                <x-cms.table-cell>{{ $company->code }}</x-cms.table-cell>
+                <x-cms.table-cell>{{ $company->email ?? '-' }}</x-cms.table-cell>
+                <x-cms.table-cell>{{ $company->phone ?? '-' }}</x-cms.table-cell>
+                <x-cms.table-cell>
+                    @if ($company->is_active)
+                        <x-cms.badge color="green">Active</x-cms.badge>
+                    @else
+                        <x-cms.badge color="red">Inactive</x-cms.badge>
+                    @endif
+                </x-cms.table-cell>
+                <x-cms.table-cell align="right" class="space-x-2">
+                    @can('companies.edit')
+                        <x-cms.action-link wire:click="edit({{ $company->id }})">
+                            Edit
+                        </x-cms.action-link>
+                    @endcan
 
-                        @can('companies.delete')
-                            <x-cms.action-link color="red" wire:click="delete({{ $company->id }})"
-                                wire:confirm="Are you sure you want to delete this company?">
-                                Delete
-                            </x-cms.action-link>
-                        @endcan
-                    </x-cms.table-cell>
-                </x-cms.table-row>
-            @empty
-                <x-cms.empty-state colspan="6" message="No companies found." />
-            @endforelse
-        </tbody>
+                    @can('companies.delete')
+                        <x-cms.action-link color="red" wire:click="delete({{ $company->id }})"
+                            wire:confirm="Are you sure you want to delete this company?">
+                            Delete
+                        </x-cms.action-link>
+                    @endcan
+                </x-cms.table-cell>
+            </x-cms.table-row>
+        @empty
+            <x-cms.empty-state colspan="6" message="No companies found." />
+        @endforelse
     </x-cms.table>
 
     <div class="mt-4">

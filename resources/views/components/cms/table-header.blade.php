@@ -1,3 +1,6 @@
-<thead class="text-xs text-gray-700 uppercase bg-gray-50">
+<th {{ $attributes->merge([
+    'scope' => 'col',
+    'class' => 'px-6 py-3',
+]) }}>
     {{ $slot }}
-</thead>
+</th>

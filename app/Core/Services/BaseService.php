@@ -49,4 +49,9 @@ abstract class BaseService
 
         return $this->currentCompanyId();
     }
+
+    protected function activityLog(string $action, string $module, ?string $description = null, ?\Illuminate\Database\Eloquent\Model $subject = null, ?array $oldValues = null, ?array $newValues = null): void
+    {
+        app(\App\Services\ActivityLogService::class)->log(action: $action, module: $module, description: $description, subject: $subject, oldValues: $oldValues, newValues: $newValues);
+    }
 }

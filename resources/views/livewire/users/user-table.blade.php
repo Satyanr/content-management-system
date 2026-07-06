@@ -13,65 +13,61 @@
     <x-cms.alert />
 
     <x-cms.table>
-        <x-cms.table-header>
-            <x-cms.table-header-row>
-                <x-cms.table-cell header>Name</x-cms.table-cell>
-                <x-cms.table-cell header>Email</x-cms.table-cell>
-                <x-cms.table-cell header>Company</x-cms.table-cell>
-                <x-cms.table-cell header>Roles</x-cms.table-cell>
-                <x-cms.table-cell header>Created</x-cms.table-cell>
-                <x-cms.table-cell header align="right">Action</x-cms.table-cell>
-            </x-cms.table-header-row>
-        </x-cms.table-header>
+        <x-slot name="head">
+            <x-cms.table-header>Name</x-cms.table-header>
+            <x-cms.table-header>Email</x-cms.table-header>
+            <x-cms.table-header>Company</x-cms.table-header>
+            <x-cms.table-header>Roles</x-cms.table-header>
+            <x-cms.table-header>Created</x-cms.table-header>
+            <x-cms.table-header align="right">Action</x-cms.table-header>
+        </x-slot>
 
-        <tbody>
-            @forelse ($users as $user)
-                <x-cms.table-row>
-                    <x-cms.table-cell class="font-medium text-gray-900">
-                        {{ $user->name }}
-                    </x-cms.table-cell>
+        @forelse ($users as $user)
+            <x-cms.table-row>
+                <x-cms.table-cell class="font-medium text-gray-900">
+                    {{ $user->name }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        {{ $user->email }}
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    {{ $user->email }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        {{ $user->company?->name ?? '-' }}
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    {{ $user->company?->name ?? '-' }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        @forelse ($user->roles as $role)
-                            <x-cms.badge>
-                                {{ $role->name }}
-                            </x-cms.badge>
-                        @empty
-                            <span class="text-gray-400">No role</span>
-                        @endforelse
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    @forelse ($user->roles as $role)
+                        <x-cms.badge>
+                            {{ $role->name }}
+                        </x-cms.badge>
+                    @empty
+                        <span class="text-gray-400">No role</span>
+                    @endforelse
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        {{ $user->created_at->format('d M Y') }}
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    {{ $user->created_at->format('d M Y') }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell align="right" class="space-x-2">
-                        @can('users.edit')
-                            <x-cms.action-link wire:click="edit({{ $user->id }})">
-                                Edit
-                            </x-cms.action-link>
-                        @endcan
+                <x-cms.table-cell align="right" class="space-x-2">
+                    @can('users.edit')
+                        <x-cms.action-link wire:click="edit({{ $user->id }})">
+                            Edit
+                        </x-cms.action-link>
+                    @endcan
 
-                        @can('users.delete')
-                            <x-cms.action-link color="red" wire:click="delete({{ $user->id }})"
-                                wire:confirm="Are you sure you want to delete this user?">
-                                Delete
-                            </x-cms.action-link>
-                        @endcan
-                    </x-cms.table-cell>
-                </x-cms.table-row>
-            @empty
-                <x-cms.empty-state colspan="5" message="No users found." />
-            @endforelse
-        </tbody>
+                    @can('users.delete')
+                        <x-cms.action-link color="red" wire:click="delete({{ $user->id }})"
+                            wire:confirm="Are you sure you want to delete this user?">
+                            Delete
+                        </x-cms.action-link>
+                    @endcan
+                </x-cms.table-cell>
+            </x-cms.table-row>
+        @empty
+            <x-cms.empty-state colspan="5" message="No users found." />
+        @endforelse
     </x-cms.table>
 
     <div class="mt-4">

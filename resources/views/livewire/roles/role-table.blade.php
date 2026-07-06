@@ -13,49 +13,45 @@
     <x-cms.alert />
 
     <x-cms.table>
-        <x-cms.table-header>
-            <x-cms.table-header-row>
-                <x-cms.table-cell header>Role Name</x-cms.table-cell>
-                <x-cms.table-cell header>Guard</x-cms.table-cell>
-                <x-cms.table-cell header>Created</x-cms.table-cell>
-                <x-cms.table-cell header align="right">Action</x-cms.table-cell>
-            </x-cms.table-header-row>
-        </x-cms.table-header>
+        <x-slot name="head">
+            <x-cms.table-header>Role Name</x-cms.table-header>
+            <x-cms.table-header>Guard</x-cms.table-header>
+            <x-cms.table-header>Created</x-cms.table-header>
+            <x-cms.table-header align="right">Action</x-cms.table-header>
+        </x-slot>
 
-        <tbody>
-            @forelse ($roles as $role)
-                <x-cms.table-row>
-                    <x-cms.table-cell class="font-medium text-gray-900">
-                        {{ $role->name }}
-                    </x-cms.table-cell>
+        @forelse ($roles as $role)
+            <x-cms.table-row>
+                <x-cms.table-cell class="font-medium text-gray-900">
+                    {{ $role->name }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        {{ $role->guard_name }}
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    {{ $role->guard_name }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell>
-                        {{ $role->created_at->format('d M Y') }}
-                    </x-cms.table-cell>
+                <x-cms.table-cell>
+                    {{ $role->created_at->format('d M Y') }}
+                </x-cms.table-cell>
 
-                    <x-cms.table-cell align="right" class="space-x-2">
-                        @can('roles.edit')
-                            <x-cms.action-link wire:click="edit({{ $role->id }})">
-                                Edit
-                            </x-cms.action-link>
-                        @endcan
+                <x-cms.table-cell align="right" class="space-x-2">
+                    @can('roles.edit')
+                        <x-cms.action-link wire:click="edit({{ $role->id }})">
+                            Edit
+                        </x-cms.action-link>
+                    @endcan
 
-                        @can('roles.delete')
-                            <x-cms.action-link color="red" wire:click="delete({{ $role->id }})"
-                                wire:confirm="Are you sure you want to delete this role?">
-                                Delete
-                            </x-cms.action-link>
-                        @endcan
-                    </x-cms.table-cell>
-                </x-cms.table-row>
-            @empty
-                <x-cms.empty-state colspan="4" message="No roles found." />
-            @endforelse
-        </tbody>
+                    @can('roles.delete')
+                        <x-cms.action-link color="red" wire:click="delete({{ $role->id }})"
+                            wire:confirm="Are you sure you want to delete this role?">
+                            Delete
+                        </x-cms.action-link>
+                    @endcan
+                </x-cms.table-cell>
+            </x-cms.table-row>
+        @empty
+            <x-cms.empty-state colspan="4" message="No roles found." />
+        @endforelse
     </x-cms.table>
 
     <div class="mt-4">

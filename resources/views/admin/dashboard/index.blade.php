@@ -3,7 +3,7 @@
 @section('content')
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p class="text-gray-600">Welcome to Digital Signage CMS</p>
+        <p class="text-gray-600">Welcome to {{ $cmsAppName ?? config('app.name', 'Digital Signage CMS') }}</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">

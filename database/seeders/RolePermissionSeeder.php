@@ -23,7 +23,7 @@ class RolePermissionSeeder extends Seeder
             ],
         );
 
-        $permissions = ['dashboard.view', 'users.view', 'users.create', 'users.edit', 'users.delete', 'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'settings.view', 'settings.edit', 'companies.view', 'companies.create', 'companies.edit', 'companies.delete', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete', 'menus.view', 'menus.create', 'menus.edit', 'menus.delete'];
+        $permissions = ['dashboard.view', 'users.view', 'users.create', 'users.edit', 'users.delete', 'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'settings.view', 'settings.edit', 'companies.view', 'companies.create', 'companies.edit', 'companies.delete', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete', 'menus.view', 'menus.create', 'menus.edit', 'menus.delete', 'activity_logs.view', 'login_histories.view'];
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
@@ -35,7 +35,7 @@ class RolePermissionSeeder extends Seeder
 
         $superAdmin->syncPermissions(Permission::all());
 
-        $admin->syncPermissions(['dashboard.view', 'users.view', 'users.create', 'users.edit', 'roles.view', 'permissions.view', 'menus.view', 'settings.view']);
+        $admin->syncPermissions(['dashboard.view', 'users.view', 'users.create', 'users.edit', 'roles.view', 'permissions.view', 'menus.view', 'settings.view', 'login_histories.view']);
 
         $operator->syncPermissions(['dashboard.view']);
 
