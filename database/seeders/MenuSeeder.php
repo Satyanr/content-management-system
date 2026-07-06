@@ -86,13 +86,24 @@ class MenuSeeder extends Seeder
             ],
         );
 
-        Menu::query()->updateOrCreate(
+        $content = Menu::query()->updateOrCreate(
             ['title' => 'Content', 'parent_id' => null],
             [
                 'route' => null,
                 'icon' => 'media',
                 'permission' => null,
                 'sort_order' => 3,
+                'is_active' => true,
+            ],
+        );
+
+        Menu::query()->updateOrCreate(
+            ['title' => 'Media Library', 'parent_id' => $content->id],
+            [
+                'route' => 'admin.media-assets.index',
+                'icon' => 'image',
+                'permission' => 'media.view',
+                'sort_order' => 1,
                 'is_active' => true,
             ],
         );
@@ -142,7 +153,7 @@ class MenuSeeder extends Seeder
         );
 
         Menu::query()->updateOrCreate(
-            ['title' => 'Settings', 'parent_id' => null],
+            ['title' => 'Settings', 'parent_id' => $cmsCore->id],
             [
                 'route' => 'admin.settings.index',
                 'icon' => 'settings',

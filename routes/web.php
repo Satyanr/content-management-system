@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\LoginHistoryController;
 use App\Http\Controllers\Admin\WorkspaceController;
+use App\Http\Controllers\Admin\MediaAssetController;
 
 Route::view('/', 'welcome')->name('home');
 
@@ -45,6 +46,9 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
             ->middleware('permission:login_histories.view')
             ->name('login-histories.index');
         Route::post('/workspace/change', [WorkspaceController::class, 'change'])->name('workspace.change');
+        Route::get('/media-assets', [MediaAssetController::class, 'index'])
+            ->middleware('permission:media.view')
+            ->name('media-assets.index');
     });
 
 require __DIR__ . '/auth.php';
