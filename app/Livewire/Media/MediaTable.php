@@ -17,11 +17,14 @@ class MediaTable extends Component
     use WithFileUploads;
     use WithPagination;
 
+    public string $activeTab = 'my_media';
+
     public string $search = '';
     public string $type = '';
 
-    public $file;
-    public string $title = '';
+    public array $files = [];
+
+    public bool $isUploadPaused = false;
 
     public function updatingSearch(): void
     {
@@ -33,65 +36,111 @@ class MediaTable extends Component
         $this->resetPage();
     }
 
-    public function resetForm(): void
+    public function setTab(string $tab): void
     {
-        $this->reset('file', 'title');
+        if (! in_array($tab, ['my_media', 'upload', 'shared'], true)) {
+            return;
+        }
+
+        $this->activeTab = $tab;
         $this->resetValidation();
     }
 
-    public function saveMedia(WorkspaceService $workspaceService): void
+    public function clearFiles(): void
+    {
+        $this->files = [];
+        $this->isUploadPaused = false;
+        $this->resetValidation();
+    }
+
+    public function pauseAllUploads(): void
+    {
+        $this->isUploadPaused = true;
+    }
+
+    public function startAllUploads(): void
+    {
+        $this->isUploadPaused = false;
+    }
+
+    public function saveFiles(WorkspaceService $workspaceService): void
     {
         Gate::authorize('media.create');
 
+        if ($this->isUploadPaused) {
+            session()->flash('error', 'Upload is paused. Click Start All before uploading.');
+            return;
+        }
+
         $companyId = $workspaceService->companyId();
 
-        if (!$companyId) {
+        if (! $companyId) {
             session()->flash('error', 'Please select a workspace before uploading media.');
             return;
         }
 
         $this->validate([
-            'title' => ['nullable', 'string', 'max:255'],
-            'file' => ['required', 'file', 'max:51200', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,avi,pdf'],
-        ]);
-
-        $originalName = $this->file->getClientOriginalName();
-        $extension = strtolower($this->file->getClientOriginalExtension());
-        $mimeType = $this->file->getMimeType();
-        $size = $this->file->getSize();
-
-        $fileName = now()->format('YmdHis') . '_' . Str::random(12) . '.' . $extension;
-
-        $path = $this->file->storeAs('companies/' . $companyId . '/media/' . now()->format('Y/m'), $fileName, 'public');
-
-        MediaAsset::create([
-            'company_id' => $companyId,
-            'uploaded_by' => Auth::id(),
-            'title' => $this->title ?: pathinfo($originalName, PATHINFO_FILENAME),
-            'original_name' => $originalName,
-            'file_name' => $fileName,
-            'disk' => 'public',
-            'path' => $path,
-            'mime_type' => $mimeType,
-            'extension' => $extension,
-            'type' => $this->detectType($mimeType, $extension),
-            'size' => $size,
-            'metadata' => [
-                'uploaded_from' => 'media_library',
+            'files' => ['required', 'array', 'min:1', 'max:100'],
+            'files.*' => [
+                'file',
+                'max:204800',
+                'mimes:jpg,jpeg,png,webp,gif,bmp,mp4,mov,avi,mpeg,wmv,pdf',
             ],
-            'is_active' => true,
         ]);
 
-        $this->resetForm();
+        foreach ($this->files as $file) {
+            $originalName = $file->getClientOriginalName();
+            $extension = strtolower($file->getClientOriginalExtension());
+            $mimeType = $file->getMimeType();
+            $size = $file->getSize();
+
+            $type = $this->detectType($mimeType, $extension);
+
+            if (! in_array($type, ['image', 'video', 'pdf'], true)) {
+                continue;
+            }
+
+            $fileName = now()->format('YmdHis') . '_' . Str::random(12) . '.' . $extension;
+
+            $path = $file->storeAs(
+                'companies/' . $companyId . '/media/' . now()->format('Y/m'),
+                $fileName,
+                'public'
+            );
+
+            MediaAsset::create([
+                'company_id' => $companyId,
+                'uploaded_by' => Auth::id(),
+                'title' => pathinfo($originalName, PATHINFO_FILENAME),
+                'original_name' => $originalName,
+                'file_name' => $fileName,
+                'disk' => 'public',
+                'path' => $path,
+                'mime_type' => $mimeType,
+                'extension' => $extension,
+                'type' => $type,
+                'size' => $size,
+                'metadata' => [
+                    'uploaded_from' => 'content_library_upload_tab',
+                ],
+                'is_active' => true,
+            ]);
+        }
+
+        $this->clearFiles();
 
         session()->flash('success', 'Media uploaded successfully.');
+
+        $this->activeTab = 'my_media';
     }
 
     public function delete(int $id, WorkspaceService $workspaceService): void
     {
         Gate::authorize('media.delete');
 
-        $media = MediaAsset::query()->forCompany($workspaceService->companyId())->findOrFail($id);
+        $media = MediaAsset::query()
+            ->forCompany($workspaceService->companyId())
+            ->findOrFail($id);
 
         $disk = $media->disk;
         $path = $media->path;
@@ -131,7 +180,9 @@ class MediaTable extends Component
             ->forCompany($workspaceService->companyId())
             ->when($this->search, function ($query) {
                 $query->where(function ($subQuery) {
-                    $subQuery->where('title', 'like', '%' . $this->search . '%')->orWhere('original_name', 'like', '%' . $this->search . '%');
+                    $subQuery
+                        ->where('title', 'like', '%' . $this->search . '%')
+                        ->orWhere('original_name', 'like', '%' . $this->search . '%');
                 });
             })
             ->when($this->type, function ($query) {

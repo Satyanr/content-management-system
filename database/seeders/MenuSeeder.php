@@ -98,7 +98,7 @@ class MenuSeeder extends Seeder
         );
 
         Menu::query()->updateOrCreate(
-            ['title' => 'Media Library', 'parent_id' => $content->id],
+            ['title' => 'Content Library', 'parent_id' => $content->id],
             [
                 'route' => 'admin.media-assets.index',
                 'icon' => 'image',
