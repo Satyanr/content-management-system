@@ -549,42 +549,27 @@
                             <img src="{{ $media->url }}" alt="{{ $media->title }}"
                                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
                         @elseif ($media->type === 'video')
-                            @if (in_array(strtolower($media->extension), ['mp4', 'webm']))
-                                <div class="relative h-full w-full bg-black">
-                                    <video src="{{ $media->url }}"
-                                        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                        muted playsinline preload="metadata"></video>
+                            <div
+                                class="relative flex h-full w-full items-center justify-center overflow-hidden bg-gray-950">
+                                <div class="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-950 to-black">
+                                </div>
 
+                                <div class="relative z-10 text-center text-white">
                                     <div
-                                        class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition-opacity group-hover:opacity-100">
-                                        <div
-                                            class="flex h-14 w-14 items-center justify-center rounded-full bg-black/50 text-2xl text-white">
-                                            ▶
-                                        </div>
+                                        class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl transition group-hover:scale-110">
+                                        ▶
+                                    </div>
+
+                                    <div class="text-sm font-semibold">
+                                        {{ strtoupper($media->extension) }} Video
                                     </div>
                                 </div>
-                            @else
+
                                 <div
-                                    class="relative flex h-full w-full items-center justify-center overflow-hidden bg-gray-900">
-                                    <div class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-950"></div>
-
-                                    <div class="relative z-10 text-center text-white">
-                                        <div
-                                            class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl">
-                                            ▶
-                                        </div>
-
-                                        <div class="text-sm font-semibold">
-                                            {{ strtoupper($media->extension) }} Video
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
-                                        {{ strtoupper($media->extension) }}
-                                    </div>
+                                    class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
+                                    {{ strtoupper($media->extension) }}
                                 </div>
-                            @endif
+                            </div>
                         @elseif ($media->type === 'pdf')
                             <div class="text-center">
                                 <div class="text-4xl">📄</div>
@@ -677,54 +662,65 @@
     @endif
 
     @if ($showPreview && $previewMedia)
-        <div class="fixed inset-0 z-[9999] bg-black/80" wire:click="closePreview">
-            <div class="absolute left-4 top-4 z-20 flex items-center gap-3 text-white">
+        <div class="fixed inset-0 z-[9999] overflow-hidden bg-black/75 backdrop-blur-sm" wire:click="closePreview"
+            x-data x-on:keydown.escape.window="$wire.closePreview()">
+            <div class="absolute left-4 top-4 z-30 flex items-center gap-3 text-white">
                 <button type="button" wire:click.stop="closePreview"
                     class="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-2xl hover:bg-black/70">
                     ×
                 </button>
 
                 <div>
-                    <div class="max-w-[420px] truncate text-sm font-semibold">
+                    <div class="max-w-[480px] truncate text-sm font-semibold">
                         {{ $previewMedia->title }}
                     </div>
+
                     <div class="text-xs text-gray-300">
                         {{ strtoupper($previewMedia->extension) }} · {{ $previewMedia->size_formatted }}
                     </div>
                 </div>
             </div>
 
-            <div class="absolute right-4 top-4 z-20 flex items-center gap-3">
+            <div class="absolute right-4 top-4 z-30">
                 <a href="{{ $previewMedia->url }}" download wire:click.stop
-                    class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100">
+                    class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow hover:bg-gray-100">
                     Download
                 </a>
             </div>
 
             <button type="button" wire:click.stop="previewPrevious"
-                class="absolute left-5 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-3xl text-white hover:bg-black/70">
+                class="absolute left-5 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-4xl text-white hover:bg-black/70">
                 ‹
             </button>
 
             <button type="button" wire:click.stop="previewNext"
-                class="absolute right-5 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-3xl text-white hover:bg-black/70">
+                class="absolute right-5 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-4xl text-white hover:bg-black/70">
                 ›
             </button>
 
-            <div class="flex h-full w-full items-center justify-center p-8">
-                <div wire:click.stop class="flex max-h-[82vh] max-w-[88vw] items-center justify-center">
+            <div class="flex h-full w-full items-center justify-center px-20 pb-32 pt-20">
+                <div wire:click.stop class="relative flex max-h-[76vh] max-w-[86vw] items-center justify-center">
                     @if ($previewMedia->type === 'image')
                         <img src="{{ $previewMedia->url }}" alt="{{ $previewMedia->title }}"
-                            class="max-h-[82vh] max-w-[88vw] object-contain shadow-2xl">
+                            class="max-h-[76vh] max-w-[86vw] object-contain shadow-2xl">
                     @elseif ($previewMedia->type === 'video')
                         @if (in_array(strtolower($previewMedia->extension), ['mp4', 'webm']))
-                            <video wire:key="preview-video-{{ $previewMedia->id }}-{{ $previewToken }}"
-                                src="{{ $previewMedia->url }}?preview={{ $previewToken }}"
-                                class="max-h-[82vh] max-w-[88vw] bg-black shadow-2xl" controls playsinline
-                                preload="auto" onloadedmetadata="this.currentTime = 0"></video>
+                            <div wire:key="preview-video-wrapper-{{ $previewMedia->id }}-{{ $previewToken }}"
+                                class="relative bg-black shadow-2xl" x-data="{ loading: true }">
+                                <div x-show="loading"
+                                    class="absolute inset-0 z-10 flex items-center justify-center bg-black">
+                                    <div
+                                        class="h-10 w-10 animate-spin rounded-full border-4 border-white/30 border-t-white">
+                                    </div>
+                                </div>
+
+                                <video src="{{ $previewMedia->url }}" class="max-h-[76vh] max-w-[86vw] bg-black"
+                                    controls playsinline preload="auto" x-on:loadedmetadata="loading = false"
+                                    x-on:canplay="loading = false" x-on:error="loading = false"></video>
+                            </div>
                         @else
                             <div
-                                class="flex h-[360px] w-[640px] max-w-[88vw] items-center justify-center rounded-xl bg-gray-900 text-center text-white shadow-2xl">
+                                class="flex h-[360px] w-[640px] max-w-[86vw] items-center justify-center rounded-xl bg-gray-900 text-center text-white shadow-2xl">
                                 <div>
                                     <div
                                         class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 text-4xl">
@@ -748,13 +744,15 @@
                         @endif
                     @elseif ($previewMedia->type === 'pdf')
                         <iframe src="{{ $previewMedia->url }}"
-                            class="h-[82vh] w-[80vw] rounded-lg bg-white shadow-2xl"></iframe>
+                            class="h-[76vh] w-[78vw] rounded-lg bg-white shadow-2xl"></iframe>
                     @else
                         <div class="rounded-xl bg-white p-8 text-center shadow-2xl">
                             <div class="text-5xl">📁</div>
+
                             <div class="mt-3 font-semibold text-gray-900">
                                 {{ $previewMedia->title }}
                             </div>
+
                             <a href="{{ $previewMedia->url }}" target="_blank" wire:click.stop
                                 class="mt-5 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                                 Open File
@@ -763,6 +761,39 @@
                     @endif
                 </div>
             </div>
+
+            @if (isset($previewList) && $previewList->count())
+                <div wire:click.stop
+                    class="absolute bottom-6 left-1/2 z-30 w-[80vw] -translate-x-1/2 overflow-x-auto rounded-xl bg-black/50 p-3 backdrop-blur">
+                    <div class="flex gap-3">
+                        @foreach ($previewList as $item)
+                            <button type="button" wire:click="openPreview({{ $item->id }})"
+                                class="relative h-16 w-28 shrink-0 overflow-hidden rounded-lg border transition
+                            {{ $previewMedia->id === $item->id ? 'border-blue-500 ring-2 ring-blue-400' : 'border-white/20 hover:border-white/70' }}">
+                                @if ($item->type === 'image')
+                                    <img src="{{ $item->url }}" class="h-full w-full object-cover"
+                                        alt="{{ $item->title }}">
+                                @elseif ($item->type === 'video')
+                                    <div class="flex h-full w-full items-center justify-center bg-gray-950 text-white">
+                                        <div
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm">
+                                            ▶
+                                        </div>
+                                    </div>
+                                @elseif ($item->type === 'pdf')
+                                    <div class="flex h-full w-full items-center justify-center bg-white text-2xl">
+                                        📄
+                                    </div>
+                                @else
+                                    <div class="flex h-full w-full items-center justify-center bg-white text-2xl">
+                                        📁
+                                    </div>
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
     @endif
 </div>

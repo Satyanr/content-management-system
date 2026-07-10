@@ -262,9 +262,12 @@ class MediaTable extends Component
                 ->find($this->previewMediaId);
         }
 
+        $previewList = $this->mediaAssetsQuery($workspaceService)->latest()->limit(24)->get();
+
         return view('livewire.media.media-table', [
             'mediaAssets' => $mediaAssets,
             'previewMedia' => $previewMedia,
+            'previewList' => $previewList,
             'isAllCompanies' => $workspaceService->isAllCompanies(),
         ]);
     }
