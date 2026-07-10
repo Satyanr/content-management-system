@@ -26,24 +26,158 @@ class MediaTable extends Component
 
     public bool $isUploadPaused = false;
 
+    public array $selectedMediaIds = [];
+
+    public bool $showPreview = false;
+    public ?int $previewMediaId = null;
+    public int $previewToken = 0;
+
     public function updatingSearch(): void
     {
         $this->resetPage();
+        $this->clearSelection();
     }
 
     public function updatingType(): void
     {
         $this->resetPage();
+        $this->clearSelection();
+    }
+
+    public function toggleSelect(int $id): void
+    {
+        $id = (string) $id;
+
+        if (in_array($id, $this->selectedMediaIds, true)) {
+            $this->selectedMediaIds = array_values(array_filter($this->selectedMediaIds, fn($selectedId) => $selectedId !== $id));
+
+            return;
+        }
+
+        $this->selectedMediaIds[] = $id;
+    }
+
+    public function clearSelection(): void
+    {
+        $this->selectedMediaIds = [];
+    }
+
+    public function openPreview(int $id, WorkspaceService $workspaceService): void
+    {
+        Gate::authorize('media.view');
+
+        MediaAsset::query()->forCompany($workspaceService->companyId())->findOrFail($id);
+
+        $this->previewMediaId = $id;
+        $this->previewToken++;
+        $this->showPreview = true;
+    }
+
+    public function closePreview(): void
+    {
+        $this->showPreview = false;
+        $this->previewMediaId = null;
+    }
+
+    public function previewNext(WorkspaceService $workspaceService): void
+    {
+        $ids = $this->previewIds($workspaceService);
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $currentIndex = array_search($this->previewMediaId, $ids, true);
+
+        if ($currentIndex === false || $currentIndex === count($ids) - 1) {
+            $nextId = $ids[0];
+        } else {
+            $nextId = $ids[$currentIndex + 1];
+        }
+
+        $this->openPreview($nextId, $workspaceService);
+    }
+
+    public function previewPrevious(WorkspaceService $workspaceService): void
+    {
+        $ids = $this->previewIds($workspaceService);
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $currentIndex = array_search($this->previewMediaId, $ids, true);
+
+        if ($currentIndex === false || $currentIndex === 0) {
+            $previousId = $ids[count($ids) - 1];
+        } else {
+            $previousId = $ids[$currentIndex - 1];
+        }
+
+        $this->openPreview($previousId, $workspaceService);
+    }
+
+    private function previewIds(WorkspaceService $workspaceService): array
+    {
+        return $this->mediaAssetsQuery($workspaceService)->latest()->pluck('id')->map(fn($id) => (int) $id)->toArray();
+    }
+
+    public function selectCurrentPage(WorkspaceService $workspaceService): void
+    {
+        Gate::authorize('media.view');
+
+        $ids = $this->mediaAssetsQuery($workspaceService)->latest()->paginate(12)->getCollection()->pluck('id')->map(fn($id) => (string) $id)->toArray();
+
+        $this->selectedMediaIds = array_values(array_unique([...$this->selectedMediaIds, ...$ids]));
+    }
+
+    public function deleteSelected(WorkspaceService $workspaceService): void
+    {
+        Gate::authorize('media.delete');
+
+        $ids = collect($this->selectedMediaIds)->map(fn($id) => (int) $id)->filter()->unique()->values();
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $mediaAssets = MediaAsset::query()->forCompany($workspaceService->companyId())->whereKey($ids->all())->get();
+
+        foreach ($mediaAssets as $media) {
+            $disk = $media->disk;
+            $path = $media->path;
+
+            $media->deleteOrFail();
+
+            if (Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
+        }
+
+        $this->clearSelection();
+
+        session()->flash('success', 'Selected media deleted successfully.');
     }
 
     public function setTab(string $tab): void
     {
-        if (! in_array($tab, ['my_media', 'upload', 'shared'], true)) {
+        if (!in_array($tab, ['my_media', 'upload', 'shared'], true)) {
             return;
         }
 
         $this->activeTab = $tab;
         $this->resetValidation();
+    }
+
+    public function updatedFiles(): void
+    {
+        if (empty($this->files)) {
+            return;
+        }
+
+        $this->isUploadPaused = false;
+
+        $this->saveFiles(app(WorkspaceService::class));
     }
 
     public function clearFiles(): void
@@ -63,84 +197,11 @@ class MediaTable extends Component
         $this->isUploadPaused = false;
     }
 
-    public function saveFiles(WorkspaceService $workspaceService): void
-    {
-        Gate::authorize('media.create');
-
-        if ($this->isUploadPaused) {
-            session()->flash('error', 'Upload is paused. Click Start All before uploading.');
-            return;
-        }
-
-        $companyId = $workspaceService->companyId();
-
-        if (! $companyId) {
-            session()->flash('error', 'Please select a workspace before uploading media.');
-            return;
-        }
-
-        $this->validate([
-            'files' => ['required', 'array', 'min:1', 'max:100'],
-            'files.*' => [
-                'file',
-                'max:204800',
-                'mimes:jpg,jpeg,png,webp,gif,bmp,mp4,mov,avi,mpeg,wmv,pdf',
-            ],
-        ]);
-
-        foreach ($this->files as $file) {
-            $originalName = $file->getClientOriginalName();
-            $extension = strtolower($file->getClientOriginalExtension());
-            $mimeType = $file->getMimeType();
-            $size = $file->getSize();
-
-            $type = $this->detectType($mimeType, $extension);
-
-            if (! in_array($type, ['image', 'video', 'pdf'], true)) {
-                continue;
-            }
-
-            $fileName = now()->format('YmdHis') . '_' . Str::random(12) . '.' . $extension;
-
-            $path = $file->storeAs(
-                'companies/' . $companyId . '/media/' . now()->format('Y/m'),
-                $fileName,
-                'public'
-            );
-
-            MediaAsset::create([
-                'company_id' => $companyId,
-                'uploaded_by' => Auth::id(),
-                'title' => pathinfo($originalName, PATHINFO_FILENAME),
-                'original_name' => $originalName,
-                'file_name' => $fileName,
-                'disk' => 'public',
-                'path' => $path,
-                'mime_type' => $mimeType,
-                'extension' => $extension,
-                'type' => $type,
-                'size' => $size,
-                'metadata' => [
-                    'uploaded_from' => 'content_library_upload_tab',
-                ],
-                'is_active' => true,
-            ]);
-        }
-
-        $this->clearFiles();
-
-        session()->flash('success', 'Media uploaded successfully.');
-
-        $this->activeTab = 'my_media';
-    }
-
     public function delete(int $id, WorkspaceService $workspaceService): void
     {
         Gate::authorize('media.delete');
 
-        $media = MediaAsset::query()
-            ->forCompany($workspaceService->companyId())
-            ->findOrFail($id);
+        $media = MediaAsset::query()->forCompany($workspaceService->companyId())->findOrFail($id);
 
         $disk = $media->disk;
         $path = $media->path;
@@ -171,28 +232,39 @@ class MediaTable extends Component
         return 'other';
     }
 
-    public function render(WorkspaceService $workspaceService)
+    private function mediaAssetsQuery(WorkspaceService $workspaceService)
     {
-        Gate::authorize('media.view');
-
-        $mediaAssets = MediaAsset::query()
+        return MediaAsset::query()
             ->with(['company', 'uploader'])
             ->forCompany($workspaceService->companyId())
             ->when($this->search, function ($query) {
                 $query->where(function ($subQuery) {
-                    $subQuery
-                        ->where('title', 'like', '%' . $this->search . '%')
-                        ->orWhere('original_name', 'like', '%' . $this->search . '%');
+                    $subQuery->where('title', 'like', '%' . $this->search . '%')->orWhere('original_name', 'like', '%' . $this->search . '%');
                 });
             })
             ->when($this->type, function ($query) {
                 $query->where('type', $this->type);
-            })
-            ->latest()
-            ->paginate(12);
+            });
+    }
+
+    public function render(WorkspaceService $workspaceService)
+    {
+        Gate::authorize('media.view');
+
+        $mediaAssets = $this->mediaAssetsQuery($workspaceService)->latest()->paginate(12);
+
+        $previewMedia = null;
+
+        if ($this->previewMediaId) {
+            $previewMedia = MediaAsset::query()
+                ->with(['company', 'uploader'])
+                ->forCompany($workspaceService->companyId())
+                ->find($this->previewMediaId);
+        }
 
         return view('livewire.media.media-table', [
             'mediaAssets' => $mediaAssets,
+            'previewMedia' => $previewMedia,
             'isAllCompanies' => $workspaceService->isAllCompanies(),
         ]);
     }

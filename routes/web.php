@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\LoginHistoryController;
 use App\Http\Controllers\Admin\WorkspaceController;
 use App\Http\Controllers\Admin\MediaAssetController;
+use App\Http\Controllers\Admin\MediaUploadController;
 
 Route::view('/', 'welcome')->name('home');
 
@@ -49,6 +50,9 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
         Route::get('/media-assets', [MediaAssetController::class, 'index'])
             ->middleware('permission:media.view')
             ->name('media-assets.index');
+        Route::post('/media-assets/upload', [MediaUploadController::class, 'store'])
+            ->middleware('permission:media.create')
+            ->name('media-assets.upload');
     });
 
 require __DIR__ . '/auth.php';
