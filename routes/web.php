@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\LoginHistoryController;
 use App\Http\Controllers\Admin\WorkspaceController;
 use App\Http\Controllers\Admin\MediaAssetController;
 use App\Http\Controllers\Admin\MediaUploadController;
+use App\Http\Controllers\Admin\MediaStreamController;
 
 Route::view('/', 'welcome')->name('home');
 
@@ -53,6 +54,9 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
         Route::post('/media-assets/upload', [MediaUploadController::class, 'store'])
             ->middleware('permission:media.create')
             ->name('media-assets.upload');
+        Route::get('/media-assets/{media}/stream', [MediaStreamController::class, 'show'])
+            ->middleware('permission:media.view')
+            ->name('media-assets.stream');
     });
 
 require __DIR__ . '/auth.php';

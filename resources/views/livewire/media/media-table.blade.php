@@ -549,27 +549,58 @@
                             <img src="{{ $media->url }}" alt="{{ $media->title }}"
                                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
                         @elseif ($media->type === 'video')
-                            <div
-                                class="relative flex h-full w-full items-center justify-center overflow-hidden bg-gray-950">
-                                <div class="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-950 to-black">
-                                </div>
+                            @if (in_array(strtolower($media->extension), ['mp4', 'webm']))
+                                <div x-data="cmsVideoThumbnail('{{ route('admin.media-assets.stream', $media) }}')"
+                                    class="relative flex h-full w-full items-center justify-center overflow-hidden bg-gray-950">
+                                    <template x-if="thumbnail">
+                                        <img x-bind:src="thumbnail"
+                                            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            alt="{{ $media->title }}">
+                                    </template>
 
-                                <div class="relative z-10 text-center text-white">
+                                    <template x-if="!thumbnail">
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-950 to-black">
+                                        </div>
+                                    </template>
+
                                     <div
-                                        class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl transition group-hover:scale-110">
-                                        ▶
+                                        class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <div
+                                            class="flex h-14 w-14 items-center justify-center rounded-full bg-black/50 text-2xl text-white">
+                                            ▶
+                                        </div>
                                     </div>
 
-                                    <div class="text-sm font-semibold">
-                                        {{ strtoupper($media->extension) }} Video
+                                    <div
+                                        class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
+                                        {{ strtoupper($media->extension) }}
                                     </div>
                                 </div>
-
+                            @else
                                 <div
-                                    class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
-                                    {{ strtoupper($media->extension) }}
+                                    class="relative flex h-full w-full items-center justify-center overflow-hidden bg-gray-950">
+                                    <div
+                                        class="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-950 to-black">
+                                    </div>
+
+                                    <div class="relative z-10 text-center text-white">
+                                        <div
+                                            class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl">
+                                            ▶
+                                        </div>
+
+                                        <div class="text-sm font-semibold">
+                                            {{ strtoupper($media->extension) }} Video
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">
+                                        {{ strtoupper($media->extension) }}
+                                    </div>
                                 </div>
-                            </div>
+                            @endif
                         @elseif ($media->type === 'pdf')
                             <div class="text-center">
                                 <div class="text-4xl">📄</div>
@@ -714,9 +745,12 @@
                                     </div>
                                 </div>
 
-                                <video src="{{ $previewMedia->url }}" class="max-h-[76vh] max-w-[86vw] bg-black"
-                                    controls playsinline preload="auto" x-on:loadedmetadata="loading = false"
-                                    x-on:canplay="loading = false" x-on:error="loading = false"></video>
+                                <video src="{{ route('admin.media-assets.stream', $previewMedia) }}"
+                                    class="max-h-[76vh] max-w-[86vw] bg-black" controls playsinline preload="auto"
+                                    x-on:loadedmetadata="loading = false" x-on:canplay="loading = false"
+                                    x-on:waiting="loading = true" x-on:playing="loading = false"
+                                    x-on:seeking="loading = true" x-on:seeked="loading = false"
+                                    x-on:error="loading = false"></video>
                             </div>
                         @else
                             <div
@@ -774,12 +808,31 @@
                                     <img src="{{ $item->url }}" class="h-full w-full object-cover"
                                         alt="{{ $item->title }}">
                                 @elseif ($item->type === 'video')
-                                    <div class="flex h-full w-full items-center justify-center bg-gray-950 text-white">
-                                        <div
-                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-sm">
-                                            ▶
+                                    @if (in_array(strtolower($item->extension), ['mp4', 'webm']))
+                                        <div x-data="cmsVideoThumbnail('{{ route('admin.media-assets.stream', $item) }}')" class="relative h-full w-full bg-gray-950">
+                                            <template x-if="thumbnail">
+                                                <img x-bind:src="thumbnail" class="h-full w-full object-cover"
+                                                    alt="{{ $item->title }}">
+                                            </template>
+
+                                            <template x-if="!thumbnail">
+                                                <div
+                                                    class="flex h-full w-full items-center justify-center bg-gray-950 text-white">
+                                                    ▶
+                                                </div>
+                                            </template>
+
+                                            <div
+                                                class="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
+                                                ▶
+                                            </div>
                                         </div>
-                                    </div>
+                                    @else
+                                        <div
+                                            class="flex h-full w-full items-center justify-center bg-gray-900 text-xs text-white">
+                                            {{ strtoupper($item->extension) }}
+                                        </div>
+                                    @endif
                                 @elseif ($item->type === 'pdf')
                                     <div class="flex h-full w-full items-center justify-center bg-white text-2xl">
                                         📄
@@ -796,4 +849,52 @@
             @endif
         </div>
     @endif
+    <script>
+        window.cmsVideoThumbnail = function(url) {
+            return {
+                thumbnail: null,
+                failed: false,
+
+                init() {
+                    const video = document.createElement('video');
+                    video.src = url;
+                    video.muted = true;
+                    video.playsInline = true;
+                    video.preload = 'metadata';
+
+                    video.addEventListener('loadedmetadata', () => {
+                        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+                        const targetTime = duration > 10 ? Math.min(3, duration * 0.1) : 1;
+
+                        try {
+                            video.currentTime = Math.min(targetTime, Math.max(duration - 0.2, 0));
+                        } catch (error) {
+                            this.failed = true;
+                        }
+                    });
+
+                    video.addEventListener('seeked', () => {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = video.videoWidth || 320;
+                            canvas.height = video.videoHeight || 180;
+
+                            const context = canvas.getContext('2d');
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                            this.thumbnail = canvas.toDataURL('image/jpeg', 0.75);
+                        } catch (error) {
+                            this.failed = true;
+                        }
+                    });
+
+                    video.addEventListener('error', () => {
+                        this.failed = true;
+                    });
+
+                    video.load();
+                }
+            }
+        }
+    </script>
 </div>
