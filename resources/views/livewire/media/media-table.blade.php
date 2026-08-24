@@ -30,6 +30,17 @@
     @endif
 
     @if ($activeTab === 'upload')
+        <div class="mb-4 text-sm text-gray-500">
+            Upload location:
+
+            <span class="font-medium text-gray-900">
+                @if ($currentFolder)
+                    {{ $currentFolder->name }}
+                @else
+                    My Media
+                @endif
+            </span>
+        </div>
         @can('media.create')
             @if (!$isAllCompanies)
                 <div x-data="{
@@ -164,6 +175,11 @@
                         files.forEach((file) => {
                             formData.append('files[]', file);
                         });
+                
+                        formData.append(
+                            'media_folder_id',
+                            '{{ $currentFolderId ?? '' }}'
+                        );
                 
                         this.xhr = new XMLHttpRequest();
                 
@@ -461,6 +477,76 @@
     @endif
 
     @if ($activeTab === 'my_media')
+        <div class="mb-5 flex flex-col gap-4">
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex min-w-0 items-center gap-2 text-sm">
+                    <button type="button" wire:click="goToRoot" class="font-medium text-blue-600 hover:text-blue-700">
+                        My Media
+                    </button>
+
+                    @foreach ($breadcrumbs as $folder)
+                        <span class="text-gray-400">/</span>
+
+                        <button type="button" wire:click="openFolder({{ $folder->id }})"
+                            class="max-w-48 truncate font-medium text-gray-700 hover:text-blue-600">
+                            {{ $folder->name }}
+                        </button>
+                    @endforeach
+                </div>
+
+                @can('media.create')
+                    @if (!$isAllCompanies)
+                        <button type="button" wire:click="openCreateFolderForm"
+                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            + New Folder
+                        </button>
+                    @endif
+                @endcan
+            </div>
+
+            @if ($currentFolder)
+                <button type="button" wire:click="goToParent"
+                    class="flex w-fit items-center gap-2 text-sm text-gray-600 hover:text-blue-600">
+                    ← Back
+                </button>
+            @endif
+        </div>
+
+        @if ($showCreateFolderForm)
+            <div class="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                    <div class="flex-1">
+                        <label class="mb-2 block text-sm font-medium text-gray-700">
+                            Folder Name
+                        </label>
+
+                        <input type="text" wire:model="newFolderName" wire:keydown.enter="createFolder"
+                            placeholder="Example: Project Jakarta"
+                            class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            autofocus>
+
+                        @error('newFolderName')
+                            <p class="mt-1 text-sm text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="button" wire:click="closeCreateFolderForm"
+                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+
+                        <button type="button" wire:click="createFolder"
+                            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                            Create Folder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div class="flex flex-col gap-3 md:flex-row">
                 <input type="text" wire:model.live.debounce.500ms="search" placeholder="Search in library..."
@@ -488,10 +574,10 @@
                         Clear
                     </button>
 
-                    @can('media.delete')
-                        <button type="button" wire:click="deleteSelected" wire:confirm="Delete selected media?"
-                            class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
-                            Delete Selected
+                    @can('media.edit')
+                        <button type="button" wire:click="openMoveMediaModal"
+                            class="rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">
+                            Move to...
                         </button>
                     @endcan
                 @endif
@@ -501,6 +587,68 @@
         @if (count($selectedMediaIds) > 0)
             <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
                 {{ count($selectedMediaIds) }} media selected.
+            </div>
+        @endif
+
+        @if ($folders->count())
+            <div class="mb-6">
+                <div class="mb-3 text-sm font-semibold text-gray-700">
+                    Folders
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    @foreach ($folders as $folder)
+                        <div wire:click="openFolder({{ $folder->id }})"
+                            class="group cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-3xl">
+                                    📁
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate font-medium text-gray-900">
+                                        {{ $folder->name }}
+                                    </div>
+
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        {{ $folder->children_count }} folders
+                                        ·
+                                        {{ $folder->media_assets_count }} media
+                                    </div>
+                                </div>
+
+                                <div x-data="{ open: false }" class="relative z-50 shrink-0" wire:click.stop
+                                    x-on:click.stop @click.outside="open = false">
+                                    <button type="button" x-on:click="open = ! open"
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg text-xl text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-gray-900 group-hover:opacity-100">
+                                        ⋮
+                                    </button>
+
+                                    <div x-show="open" x-transition style="display: none;"
+                                        class="absolute right-0 top-full z-[9999] mt-2 w-40 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
+                                        @can('media.edit')
+                                            <button type="button"
+                                                wire:click="openRenameFolderModal({{ $folder->id }})"
+                                                x-on:click="open = false"
+                                                class="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100">
+                                                Rename
+                                            </button>
+                                        @endcan
+
+                                        @can('media.delete')
+                                            <button type="button" wire:click="deleteFolder({{ $folder->id }})"
+                                                wire:confirm="Delete this folder?" x-on:click="open = false"
+                                                class="block w-full border-t border-gray-100 px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50">
+                                                Delete
+                                            </button>
+                                        @endcan
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         @endif
 
@@ -646,6 +794,19 @@
                                         class="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100">
                                         Download
                                     </a>
+                                    @can('media.edit')
+                                        <button type="button" wire:click="openRenameMediaModal({{ $media->id }})"
+                                            x-on:click="open = false"
+                                            class="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100">
+                                            Rename
+                                        </button>
+
+                                        <button type="button" wire:click="openMoveSingleMediaModal({{ $media->id }})"
+                                            x-on:click="open = false"
+                                            class="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100">
+                                            Move to...
+                                        </button>
+                                    @endcan
 
                                     @can('media.delete')
                                         <button type="button" wire:click="delete({{ $media->id }})"
@@ -689,6 +850,197 @@
     @if ($activeTab === 'shared')
         <div class="rounded-xl border border-gray-200 bg-white p-10 text-center text-gray-500">
             Shared media will be added later.
+        </div>
+    @endif
+
+    @if ($showRenameFolderModal)
+        <div class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4"
+            wire:click="closeRenameFolderModal">
+            <div wire:click.stop class="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Rename Folder
+                        </h2>
+
+                        <p class="mt-1 text-sm text-gray-500">
+                            Change folder name.
+                        </p>
+                    </div>
+
+                    <button type="button" wire:click="closeRenameFolderModal"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                        ×
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">
+                        Folder Name
+                    </label>
+
+                    <input type="text" wire:model="renameFolderName" wire:keydown.enter="renameFolder"
+                        class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" autofocus>
+
+                    @error('renameFolderName')
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+                    <button type="button" wire:click="closeRenameFolderModal"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+
+                    <button type="button" wire:click="renameFolder" wire:loading.attr="disabled"
+                        wire:target="renameFolder"
+                        class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                        <span wire:loading.remove wire:target="renameFolder">
+                            Save
+                        </span>
+
+                        <span wire:loading wire:target="renameFolder">
+                            Saving...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showRenameMediaModal)
+        <div class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4"
+            wire:click="closeRenameMediaModal">
+            <div wire:click.stop class="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Rename Media
+                        </h2>
+
+                        <p class="mt-1 text-sm text-gray-500">
+                            Change the display name of this media.
+                        </p>
+                    </div>
+
+                    <button type="button" wire:click="closeRenameMediaModal"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                        ×
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">
+                        Media Name
+                    </label>
+
+                    <input type="text" wire:model="renameMediaTitle" wire:keydown.enter="renameMedia"
+                        class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" autofocus>
+
+                    @error('renameMediaTitle')
+                        <p class="mt-2 text-sm text-red-600">
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+                    <button type="button" wire:click="closeRenameMediaModal"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+
+                    <button type="button" wire:click="renameMedia" wire:loading.attr="disabled"
+                        wire:target="renameMedia"
+                        class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                        <span wire:loading.remove wire:target="renameMedia">
+                            Save
+                        </span>
+
+                        <span wire:loading wire:target="renameMedia">
+                            Saving...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showMoveMediaModal)
+        <div class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-4"
+            wire:click="closeMoveMediaModal">
+            <div wire:click.stop class="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+                {{-- Header --}}
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Move Media
+                        </h2>
+
+                        <p class="mt-1 text-sm text-gray-500">
+                            {{ count($selectedMediaIds) }} media selected
+                        </p>
+                    </div>
+
+                    <button type="button" wire:click="closeMoveMediaModal"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                        ×
+                    </button>
+                </div>
+
+                {{-- Body --}}
+                <div class="p-6">
+                    <label class="mb-2 block text-sm font-medium text-gray-700">
+                        Destination
+                    </label>
+
+                    <select wire:model="moveTargetFolderId"
+                        class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">
+                            My Media / Root
+                        </option>
+
+                        @foreach ($moveFolders as $folder)
+                            @if ($folder->id !== $currentFolderId)
+                                <option value="{{ $folder->id }}">
+                                    @if ($folder->parent)
+                                        {{ $folder->parent->name }} /
+                                    @endif
+
+                                    {{ $folder->name }}
+                                </option>
+                            @endif
+                        @endforeach
+                    </select>
+
+                    <div class="mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                        Media files will remain in storage. Only their library folder location will change.
+                    </div>
+                </div>
+
+                {{-- Footer --}}
+                <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+                    <button type="button" wire:click="closeMoveMediaModal"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+
+                    <button type="button" wire:click="moveSelectedMedia" wire:loading.attr="disabled"
+                        wire:target="moveSelectedMedia"
+                        class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span wire:loading.remove wire:target="moveSelectedMedia">
+                            Move
+                        </span>
+
+                        <span wire:loading wire:target="moveSelectedMedia">
+                            Moving...
+                        </span>
+                    </button>
+                </div>
+            </div>
         </div>
     @endif
 

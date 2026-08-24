@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MediaAsset extends Model
 {
-    protected $fillable = ['company_id', 'uploaded_by', 'title', 'original_name', 'file_name', 'disk', 'path', 'mime_type', 'extension', 'type', 'size', 'width', 'height', 'duration', 'metadata', 'is_active'];
-
+    protected $fillable = ['company_id', 'media_folder_id', 'uploaded_by', 'title', 'original_name', 'file_name', 'disk', 'path', 'mime_type', 'extension', 'type', 'size', 'width', 'height', 'duration', 'metadata', 'is_active'];
     protected function casts(): array
     {
         return [
@@ -30,6 +29,11 @@ class MediaAsset extends Model
     public function getUrlAttribute(): string
     {
         return asset('storage/' . ltrim($this->path, '/'));
+    }
+    
+    public function folder(): BelongsTo
+    {
+        return $this->belongsTo(MediaFolder::class, 'media_folder_id');
     }
 
     public function getSizeFormattedAttribute(): string
