@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MediaAsset;
+use App\Models\PlaylistZoneItem;
+use App\Models\Schedule;
 use App\Services\DeviceManifestService;
 use App\Services\DeviceMediaFile;
 use Illuminate\Http\Request;
@@ -18,7 +20,7 @@ class PlayerController extends Controller
 
     private function supported(Request $request): bool
     {
-        return $request->header('X-Player-Schema-Version', '1') === '1';
+        return $request->header('X-Player-Schema-Version', '1') !== '' && in_array($request->header('X-Player-Schema-Version', '1'), ['1', '2'], true);
     }
 
     private function matches(Request $request, string $etag): bool
@@ -37,7 +39,11 @@ class PlayerController extends Controller
         if (! $this->supported($request)) {
             return $this->error('unsupported_schema_version', 406);
         }
-        $manifest = $service->build($request->attributes->get('device_credential')->device);
+        $device = $request->attributes->get('device_credential')->device;
+        if ($request->header('X-Player-Schema-Version', '1') === '1' && ($device->primary_playlist_id || PlaylistZoneItem::where('max_plays', '>', 0)->whereHas('zone.page.playlist', fn ($q) => $q->where('company_id', $device->company_id))->exists() || Schedule::where('company_id', $device->company_id)->where(fn ($q) => $q->where('playback_mode', '!=', 'legacy')->orWhere('target_type', '!=', 'all'))->exists())) {
+            return $this->error('upgrade_required', 426);
+        }
+        $manifest = $service->build($device, (int) $request->header('X-Player-Schema-Version', '1'));
         // Weak validator represents semantic content, excluding the live server clock.
         $etag = 'W/"'.$manifest['revision'].'"';
         $headers = ['ETag' => $etag, 'X-Content-Revision' => $manifest['revision'], 'X-Server-Time-Utc' => $manifest['serverTimeUtc']];
@@ -59,7 +65,7 @@ class PlayerController extends Controller
             return $this->error('media_not_found', 404);
         }
         // Re-evaluate live scope before conditional responses and every Range request.
-        $manifest = $service->build($device);
+        $manifest = $service->build($device, (int) $request->header('X-Player-Schema-Version', '1'));
         $metadata = collect($manifest['media'])->firstWhere('id', $asset->id);
         if (! $metadata) {
             return $this->error('media_not_found', 404);

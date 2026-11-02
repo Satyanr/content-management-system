@@ -4,9 +4,10 @@ import { readFileSync } from 'node:fs';
 const ajv = new Ajv2020({ strict: false, allErrors: false, validateFormats: true });
 addFormats(ajv);
 const validate = ajv.compile(JSON.parse(readFileSync(new URL('./manifest.schema.json', import.meta.url))));
+const validateV2 = ajv.compile(JSON.parse(readFileSync(new URL('./manifest-v2.schema.json', import.meta.url))));
 const hex = /^[a-f0-9]{64}$/;
 export function validateManifest(data, publicId) {
-    if (!validate(data) || data.device.publicId !== publicId) throw new Error('manifest_invalid');
+    if (!(data?.schemaVersion === 2 ? validateV2(data) : validate(data)) || data.device.publicId !== publicId) throw new Error('manifest_invalid');
     if (data.playlists.length > 500 || data.media.length > 10000 || data.schedulePlan.length > 10000) throw new Error('manifest_limit');
     const media = new Map();
     for (const asset of data.media) {
@@ -27,6 +28,7 @@ export function validateManifest(data, publicId) {
                 if (zone.items.length > 10000 || zone.width < 1 || zone.height < 1) throw new Error('manifest_layout_invalid');
                 for (const item of zone.items) {
                     unique(item.id, itemIds);
+                    if(data.schemaVersion===2 && (!Number.isSafeInteger(item.completedCount)||item.completedCount<0||!Number.isSafeInteger(item.maxPlays)||item.maxPlays<0))throw new Error('manifest_quota_invalid');
                     if (!item.available || !media.has(item.mediaId) || media.get(item.mediaId).type !== item.type) throw new Error('manifest_reference_invalid');
                     if (item.durationMode === 'auto' ? item.type !== 'video' || item.duration !== null : item.duration === null) throw new Error('manifest_duration_invalid');
                 }
@@ -38,12 +40,14 @@ export function validateManifest(data, publicId) {
     let end = from;
     for (const segment of data.schedulePlan) {
         const start = Date.parse(segment.startUtc), next = Date.parse(segment.endUtc);
-        if (start !== end || next <= start || next > until || (segment.state === 'scheduled' ? !segment.schedule || !playlists.has(segment.schedule.playlistId) : segment.schedule !== null)) throw new Error('manifest_schedule_invalid');
+        if (start !== end || next <= start || next > until || (data.schemaVersion === 2 ? (segment.playlistId !== null && !playlists.has(segment.playlistId)) : (segment.state === 'scheduled' ? !segment.schedule || !playlists.has(segment.schedule.playlistId) : segment.schedule !== null))) throw new Error('manifest_schedule_invalid');
+        if(data.schemaVersion===2 && ((segment.state==='playing')!==(segment.playlistId!==null) || (segment.schedule && segment.schedule.playlistId!==segment.playlistId)))throw new Error('manifest_selection_invalid');
         end = next;
     }
     if (end !== until) throw new Error('manifest_schedule_invalid');
     const current = data.schedulePlan.find(s => Date.parse(s.startUtc) <= now && now < Date.parse(s.endUtc));
-    if (data.state !== current.state || (data.currentSchedule?.id ?? null) !== (current.schedule?.id ?? null) || data.currentPlaylistId !== (current.schedule?.playlistId ?? null)) throw new Error('manifest_current_invalid');
+    if (data.state !== current.state || (data.currentSchedule?.id ?? null) !== (current.schedule?.id ?? null) || data.currentPlaylistId !== (data.schemaVersion === 2 ? current.playlistId : (current.schedule?.playlistId ?? null))) throw new Error('manifest_current_invalid');
+    if(data.schemaVersion===2 && (data.fallbackSelection.playlistId!==data.fallbackPlaylistId || (data.fallbackPlaylistId!==null && !playlists.has(data.fallbackPlaylistId))))throw new Error('manifest_fallback_invalid');
     return data;
 }
 export class ServerClock {

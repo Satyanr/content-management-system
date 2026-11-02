@@ -1,22 +1,30 @@
+import { DevicePlayback } from '/playback/device-engine.js';
 import { PlaybackEngine } from '/playback/vendor/studio-playback.js';
 import { PlaybackRenderer } from '/playback/vendor/studio-playback-renderer.js';
 import { PlayerMetadataQueue } from '/playback/metadata.js';
 const $ = id => document.getElementById(id);
-let state, engine, renderer, pool, key, layout, settingsDirty = false, repairing = false, audioVersion = 0;
+let state, engine, renderer, pool, key, layout, latestPlayback=null,reporting=false,reportedKey=null, settingsDirty = false, repairing = false, audioVersion = 0;
 const cleanup = () => { pool?.destroy(); engine?.destroy(); renderer?.destroy(); pool = engine = renderer = null; };
 function scale() { if (!layout) return; const ratio = Math.min(innerWidth / layout.width, innerHeight / layout.height); Object.assign($('canvas').style, { width: layout.width * ratio + 'px', height: layout.height * ratio + 'px' }); }
-function play(next) {
-    if (next.key === key) return;
-    key = next.key; cleanup(); layout = next.layout;
+let playQueue=Promise.resolve();
+async function reportApplied(next){
+    const receipt=next.key+'/'+next.revision;if(reporting || reportedKey===receipt)return;reporting=true;
+    try{const result=await window.player.applied({playlistId:next.layout?.id??null,revision:next.revision,commandId:next.commandId??null});if(result.ok)reportedKey=receipt;}finally{reporting=false;}
+}
+async function play(next) {
+    latestPlayback=next;
+    if (next.key === key) {if(next.schemaVersion===2 && !layout)void reportApplied(next);return;}
+    key = next.key; pool?.destroy();await engine?.destroy();renderer?.destroy();pool=engine=renderer=null;layout = next.layout;
     $('idle').hidden = !!layout; $('canvas').hidden = !layout;
-    $('idle-title').textContent = ({ expired: 'Offline schedule expired', no_schedule: 'No scheduled content', no_package: 'Waiting for content', clock_unavailable: 'Waiting for server time', reactivation_required: 'Device activation required' })[next.state] ?? 'Ready to connect';
-    if (!layout) return;
+    $('idle-title').textContent = ({ idle: 'Belum ada konten', playing:'Memutar Playlist', expired: 'Offline schedule expired', no_schedule: 'No scheduled content', no_package: 'Belum ada konten', clock_unavailable: 'Waiting for server time', reactivation_required: 'Device activation required' })[next.state] ?? 'Ready to connect';
+    if (!layout) {if(next.schemaVersion===2)void reportApplied(next);return;}
     scale();
     renderer = new PlaybackRenderer($('canvas'), { onError: src => engine?.setMetadata(src, { status: 'error' }), onBlocked: () => { $('connection').textContent = 'AUDIO BLOCKED — open settings and toggle mute'; } });
-    engine = new PlaybackEngine(layout, { onChange: snapshot => renderer?.render(snapshot, { width: layout.width, height: layout.height, muted: state.settings.muted, volume: state.settings.volume, audioVersion }) });
+    const Engine=next.schemaVersion===2 ? DevicePlayback : PlaybackEngine;
+    engine = new Engine(layout, {bridge:window.player,ready:zone=>{const entry=renderer?.entries.get(zone),node=entry?.node;return entry?.failed ? 'error' : !node ? false : node.tagName==='VIDEO' ? node.readyState>=3 && !node.paused && !node.seeking : node.complete && node.naturalWidth>0;},onChange: snapshot => {renderer?.render(snapshot, { width: layout.width, height: layout.height, muted: state.settings.muted, volume: state.settings.volume, audioVersion });if(next.schemaVersion===2 && reportedKey!==key+'/'+latestPlayback.revision && (snapshot.quotaEmpty || snapshot.windows.some(w=>{const e=renderer?.entries.get(w.zone.id),n=e?.node;return !e?.failed && (n?.tagName==='VIDEO'?n.readyState>=3&&!n.paused:n?.complete&&n?.naturalWidth>0);}))){void reportApplied(latestPlayback);}} });
     pool = new PlayerMetadataQueue({ onResult: (src, info) => engine?.setMetadata(src, info) });
     pool.load(engine.manifest);
-    if (engine.manifest.totalDuration) engine.seek(Math.max(0, (next.utc - Date.parse(next.startUtc)) / 1000) % engine.manifest.totalDuration);
+    if (next.schemaVersion!==2 && engine.manifest.totalDuration) engine.seek(Math.max(0, (next.utc - Date.parse(next.startUtc)) / 1000) % engine.manifest.totalDuration);
     engine.play();
 }
 function update(next) {
@@ -25,7 +33,7 @@ function update(next) {
     $('setup').hidden = next.configured && next.playback.state !== 'reactivation_required' && !repairing;
     $('activate').disabled = next.configured && !next.operatorUnlocked;
     $('connection').textContent = `${next.online ? 'ONLINE' : 'OFFLINE'} · ${next.playback.state.replaceAll('_', ' ').toUpperCase()}`;
-    play(next.playback);
+    playQueue=playQueue.then(()=>play(next.playback)).catch(()=>{key=null;$('connection').textContent='PLAYBACK LEDGER ERROR - playback paused';});
     const rows = { Device: next.deviceId ?? 'Not paired', CMS: next.cmsUrl || 'Not configured', Connection: next.online ? 'Online' : 'Offline', Schedule: next.playback.schedule?.name ?? 'None', Playlist: next.playback.layout?.name ?? 'None', Revision: next.revision ?? 'None', 'Last successful sync': next.lastSync ?? 'Never', 'Cache size': (next.cacheBytes / 1024 ** 2).toFixed(1) + ' MiB', Version: next.version, 'Last error': next.lastError ?? 'None' };
     $('status').replaceChildren(...Object.entries(rows).flatMap(([name, value]) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = name; dd.textContent = value; return [dt, dd]; }));
     $('unlock-form').hidden = next.operatorUnlocked; $('settings-form').hidden = !next.operatorUnlocked;

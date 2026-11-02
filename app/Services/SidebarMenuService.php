@@ -64,7 +64,7 @@ class SidebarMenuService
             foreach ($entries as $entry) {
                 $key = match ($entry->route) {
                     'admin.dashboard' => 'dashboard',
-                    'admin.media-assets.index', 'admin.playlists.index', 'admin.scheduler.index', 'admin.devices.index' => 'operational',
+                    'admin.media-assets.index', 'admin.playlists.index', 'admin.scheduler.index', 'admin.devices.index', 'admin.proof-of-play.index' => 'operational',
                     'admin.users.index', 'admin.companies.index', 'admin.roles.index', 'admin.permissions.index', 'admin.menus.index', 'admin.settings.index', 'admin.activity-logs.index', 'admin.login-histories.index' => 'administration',
                     default => 'custom',
                 };

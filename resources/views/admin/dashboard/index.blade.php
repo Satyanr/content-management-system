@@ -23,7 +23,7 @@
             <div class="mt-5 flex items-start gap-4"><span class="rounded-xl bg-blue-50 p-3 text-blue-600"><x-studio-icon name="video" class="h-6 w-6"/></span><div class="min-w-0"><h3 class="break-words font-semibold text-slate-900">{{ $scheduled->playlist->name }}</h3><p class="mt-1 text-sm text-slate-600">{{ $scheduled->name }}</p>
             @if ($scheduledWindow)<p class="mt-2 text-xs text-slate-500">{{ $scheduledWindow['start']->setTimezone($scheduled->timezone)->format('d M Y H:i') }} &middot; {{ $scheduledWindow['end']->setTimezone($scheduled->timezone)->format('d M Y H:i') }} &middot; {{ $scheduled->timezone }}</p>@endif
             @if ($transition)<p class="mt-2 text-xs text-blue-700">Transisi berikutnya: {{ $transition->setTimezone($scheduled->timezone)->format('d M Y H:i') }} &middot; {{ $scheduled->timezone }}</p>@else<p class="mt-2 text-xs text-slate-400">Tidak ada transisi dalam 7 hari mendatang.</p>@endif</div></div>
-        @else<div class="mt-5 rounded-xl bg-slate-50 p-5"><h3 class="font-medium text-slate-800">Belum ada jadwal aktif</h3><p class="mt-2 text-sm text-slate-500">Siapkan Playlist lalu atur waktu tayangnya di Jadwal Tayang.</p><a href="{{ route('admin.scheduler.index') }}" class="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-blue-700">Buka Jadwal Tayang &rarr;</a>@if ($transition)<p class="mt-2 text-xs text-slate-500">Transisi berikutnya: {{ $transition->format('d M Y H:i') }} UTC</p>@endif</div>@endif
+        @else<div class="mt-5 rounded-xl bg-slate-50 p-5"><h3 class="font-medium text-slate-800">Belum ada jadwal aktif</h3><p class="mt-2 text-sm text-slate-500">Tanpa jadwal, perangkat tetap dapat memutar Playlist utamanya. Assign melalui Playlist atau Perangkat; Jadwal Tayang opsional untuk pergantian otomatis.</p><a href="{{ route('admin.scheduler.index') }}" class="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-blue-700">Buka Jadwal Tayang &rarr;</a>@if ($transition)<p class="mt-2 text-xs text-slate-500">Transisi berikutnya: {{ $transition->format('d M Y H:i') }} UTC</p>@endif</div>@endif
     </section>
     @endcan @endcan
     <section class="dashboard-card">
@@ -33,7 +33,7 @@
                 @can($permission)<a href="{{ route($route) }}" class="group flex min-h-28 flex-col items-start rounded-xl border border-slate-100 bg-slate-50 p-4 hover:border-blue-200 hover:bg-blue-50"><x-studio-icon :name="$icon" class="mb-3 h-5 w-5 text-blue-600"/><span class="text-sm font-semibold text-slate-800">Buka {{ $label }}</span><span class="mt-1 text-xs text-slate-500">{{ $tip }}</span></a>@endcan
             @endforeach
         </div>
-        <p class="mt-4 text-xs leading-relaxed text-slate-400">Mulai dari Konten &rarr; susun Playlist &rarr; atur Jadwal &rarr; aktifkan Perangkat. Tindakan tersedia di halaman modul sesuai hak akses Anda.</p>
+        <p class="mt-4 text-xs leading-relaxed text-slate-400">Mulai dari Konten &rarr; susun Playlist &rarr; pilih Perangkat. Gunakan Jadwal untuk pergantian otomatis. Tindakan tersedia di halaman modul sesuai hak akses Anda.</p>
     </section>
     <div class="grid items-start gap-6 xl:grid-cols-5">
         @if ($deviceStats !== null)

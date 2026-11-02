@@ -36,7 +36,7 @@
                 <div class="space-y-3 p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <h3 class="truncate font-semibold text-gray-900">{{ $playlist->name }}</h3>
+                            <h3 class="truncate font-semibold text-gray-900">{{ $playlist->name }} @can('devices.view')<a class="ml-2 text-xs text-blue-700" href="{{ route('admin.playlists.assignment',$playlist->id) }}">Perangkat / Tayangkan</a>@endcan</h3>
                             <p class="mt-1 line-clamp-2 text-xs text-gray-500">
                                 {{ $playlist->description ?: 'Tanpa deskripsi' }}
                             </p>

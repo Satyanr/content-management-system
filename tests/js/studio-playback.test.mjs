@@ -282,3 +282,8 @@ test('Playback applies item zoom pan and crop without changing Window geometry',
     assert.equal(f.renderer.entries.get(1).box.style.width,100*geometry.width/input.width+'%');
     assert.equal(input.pages[1].zones[0].width,geometry.width);f.renderer.destroy();f.engine.destroy();
 });
+
+test('Studio warns when manual or resolved Auto item exceeds its Page without inventing unknown duration',()=>{
+ const ui={...studioTimeline(),metadata:{},playbackManifest:{pages:[{duration:2,zones:[{items:[{id:99,type:'video',src:'test',duration:null,knownDuration:null,available:true}]}]}]}};
+ assert.equal(ui.fileExceedsPage(99),false);ui.metadata.test={status:'ready',duration:3};assert.equal(ui.fileExceedsPage(99),true);ui.metadata.test={status:'error'};assert.equal(ui.fileExceedsPage(99),false);ui.playbackManifest.pages[0].zones[0].items[0].duration=4;assert.equal(ui.fileExceedsPage(99),true);
+});

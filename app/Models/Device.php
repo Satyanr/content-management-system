@@ -17,7 +17,7 @@ class Device extends Model
 
     protected function casts(): array
     {
-        return ['screen_width' => 'integer', 'screen_height' => 'integer', 'last_seen_at' => UtcDateTime::class, 'activated_at' => UtcDateTime::class, 'heartbeat' => 'array'];
+        return ['screen_width' => 'integer', 'screen_height' => 'integer', 'last_seen_at' => UtcDateTime::class, 'activated_at' => UtcDateTime::class, 'heartbeat' => 'array', 'playlist_command_at' => UtcDateTime::class, 'playback_reported_at' => UtcDateTime::class];
     }
 
     protected static function booted(): void
@@ -31,6 +31,11 @@ class Device extends Model
     public function scopeForCompany(Builder $query, ?int $id): Builder
     {
         return $id === null ? $query->whereRaw('1 = 0') : $query->where('devices.company_id', $id);
+    }
+
+    public function primaryPlaylist(): BelongsTo
+    {
+        return $this->belongsTo(Playlist::class, 'primary_playlist_id');
     }
 
     public function company(): BelongsTo

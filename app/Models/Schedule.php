@@ -9,11 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Schedule extends Model
 {
-    protected $fillable = ['company_id', 'playlist_id', 'created_by', 'name', 'schedule_type', 'timezone', 'starts_at_utc', 'ends_at_utc', 'start_date', 'end_date', 'start_time', 'end_time', 'weekdays', 'priority', 'is_active'];
+    protected $fillable = ['playback_mode', 'target_type', 'target_ids', 'company_id', 'playlist_id', 'created_by', 'name', 'schedule_type', 'timezone', 'starts_at_utc', 'ends_at_utc', 'start_date', 'end_date', 'start_time', 'end_time', 'weekdays', 'priority', 'is_active'];
 
     protected function casts(): array
     {
-        return ['starts_at_utc' => UtcDateTime::class, 'ends_at_utc' => UtcDateTime::class, 'weekdays' => 'array', 'priority' => 'integer', 'is_active' => 'boolean'];
+        return ['target_ids' => 'array', 'starts_at_utc' => UtcDateTime::class, 'ends_at_utc' => UtcDateTime::class, 'weekdays' => 'array', 'priority' => 'integer', 'is_active' => 'boolean'];
     }
 
     public function company(): BelongsTo

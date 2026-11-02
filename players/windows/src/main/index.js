@@ -22,7 +22,7 @@ else {
     const publish = () => {
         if (!runtime || !window || window.isDestroyed()) return;
         const snapshot = runtime.snapshot();
-        if (snapshot.playback.state === 'scheduled' && snapshot.playback.layout) { if (blocker === null) blocker = powerSaveBlocker.start('prevent-display-sleep'); } else releasePower();
+        if (['scheduled','playing'].includes(snapshot.playback.state) && snapshot.playback.layout) { if (blocker === null) blocker = powerSaveBlocker.start('prevent-display-sleep'); } else releasePower();
         snapshot.displays = screen.getAllDisplays().map(d => ({ id: d.id, label: d.label || `Display ${d.id}`, width: d.size.width, height: d.size.height }));
         window.webContents.send('player:state', snapshot);
     };
@@ -35,7 +35,7 @@ else {
     };
     const createWindow = () => {
         window = new BrowserWindow({ show: !hidden, width: 1280, height: 720, backgroundColor: '#050911', autoHideMenuBar: true,
-            webPreferences: { preload: fileURLToPath(new URL('../preload/index.cjs', import.meta.url)), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, devTools: !app.isPackaged, autoplayPolicy: 'no-user-gesture-required' } });
+            webPreferences: { preload: fileURLToPath(new URL('../preload/index.cjs', import.meta.url)), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, devTools: !app.isPackaged, backgroundThrottling:false, autoplayPolicy: 'no-user-gesture-required' } });
         window.removeMenu();
         window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
         window.webContents.on('will-navigate', event => event.preventDefault());
@@ -69,6 +69,10 @@ else {
             try { caller(event); if (JSON.stringify(input ?? null).length > 4096) throw new Error('ipc_input_invalid'); return { ok: true, value: await operation(input) }; }
             catch (error) { runtime.error(error); publish(); return { ok: false, error: /^[a-z_0-9]{1,80}$/.test(error.code ?? error.message) ? error.code ?? error.message : 'operation_failed' }; }
         });
+        handler('playback-applied',input=>runtime.applied(input));
+        handler('playback-begin', input=>runtime.beginPlayback(input));
+        handler('playback-checkpoint', input=>runtime.ledger.checkpoint(input.id,input.actual_played_ms));
+        handler('playback-finish', input=>runtime.ledger.finish(input.id,input));
         handler('status', () => { publish(); return runtime.snapshot(); });
         handler('activate', async input => {
             if (!input || Object.keys(input).sort().join(',') !== 'code,origin' || typeof input.origin !== 'string' || input.origin.length > 2048 || typeof input.code !== 'string' || !/^[a-fA-F0-9-]{20,24}$/.test(input.code)) throw new Error('activation_input_invalid');
@@ -77,7 +81,7 @@ else {
         handler('unlock', input => { if (typeof input !== 'string' || !/^\d{6,12}$/.test(input)) throw new Error('operator_pin_format'); runtime.lock.unlock(input); publish(); return true; });
         handler('sync', () => { if (!runtime.lock.unlocked) throw new Error('operator_locked'); if (!runtime.blocked) runtime.schedule('sync', () => runtime.synchronize(), 0); return true; });
         let lastReconnect = 0;
-        handler('reconnect', () => { if (!runtime.blocked && Date.now() - lastReconnect > 30000) { lastReconnect = Date.now(); runtime.schedule('sync', () => runtime.synchronize(), 250); } return true; });
+        handler('reconnect', () => { if (!runtime.blocked && Date.now() - lastReconnect > 30000) { lastReconnect = Date.now(); runtime.schedule('sync', () => runtime.synchronize(), 250);runtime.schedule('events',()=>runtime.uploadEvents(),500); } return true; });
         handler('settings', async input => {
             if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('settings_invalid');
             for (const [key, value] of Object.entries(input)) {

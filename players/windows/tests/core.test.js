@@ -240,3 +240,12 @@ test('optional media transform is identical in Player and Studio while legacy la
     assert.deepEqual(mediaTransformStyle(mapped.mediaTransform),studioMediaStyle(item.mediaTransform));
     item.mediaTransform.scale=6;assert.throws(()=>validateManifest(m,publicId));
 });
+
+test('checkpoint 1 v2 always-on without schedule survives plan expiry and restart manifest restore',()=>{
+    const m=manifest();m.schemaVersion=2;m.state='playing';m.currentSchedule=null;m.fallbackPlaylistId=m.playlists[0].id;m.commandId='command-a';
+    for(const p of m.playlists)for(const page of p.pages)for(const z of page.zones)for(const item of z.items)Object.assign(item,{maxPlays:0,counterEpoch:'00000000-0000-4000-8000-000000000002',completedCount:0});
+    m.schedulePlan=m.schedulePlan.map(s=>({...s,state:'playing',schedule:null,playlistId:m.currentPlaylistId,commandId:m.commandId,source:'primary'}));
+    m.fallbackSelection=m.schedulePlan[0];
+    validateManifest(m,publicId);assert.equal(segmentAt(m,Date.parse(m.validUntilUtc)+100000).playlist.id,m.currentPlaylistId);
+    const restored=JSON.parse(JSON.stringify(m));assert.equal(playbackKey(segmentAt(restored,Date.now()),restored.media),playbackKey(segmentAt(m,Date.now()),m.media));
+});

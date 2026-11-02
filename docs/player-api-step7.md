@@ -1,5 +1,6 @@
 # Player API v1 — Step 7
 
+Perkembangan berikutnya: assignment/always-on, play limits, dan Proof of Play memakai [kontrak v2](always-on-playlist-proof-of-play.md). Kontrak v1 pada dokumen Step 7 ini tetap legacy; konfigurasi baru yang memerlukan v2 memberi `upgrade_required` kepada Player v1.
 Backend API untuk Windows/Android Player. Tidak membuat aplikasi Player, assignment Group, cron playback, atau perubahan Scheduler/Studio UI. Tidak ada migration database baru, dependency baru, pemindahan media, commit atau push.
 
 ## Endpoint dan autentikasi

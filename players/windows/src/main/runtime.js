@@ -1,3 +1,4 @@
+import { PlaybackLedger } from '../services/playback/ledger.js';
 import path from 'node:path';
 import { rm } from 'node:fs/promises';
 import { CredentialVault, atomicWrite, readJson, OperatorLock } from '../services/security/storage.js';
@@ -13,10 +14,11 @@ export class PlayerRuntime {
         Object.assign(this, { root, version, allowLocalHttp, display, notify });
         this.vault = new CredentialVault(root, safeStorage); this.store = new ContentStore(path.join(root, 'content')); this.clock = new ServerClock(); this.logger = new SafeLogger(path.join(root, 'logs'));
         this.state = { online: false, lastError: null, lastSync: null, cacheBytes: 0 }; this.settings = { kiosk: false, alwaysOnTop: false, autoStart: false, displayId: null, muted: true, volume: 0.5 };
+        this.ledger=new PlaybackLedger(path.join(root,'playback'),{utc:()=>this.clock.now()??Date.now()});
         this.timers = new Map(); this.stopped = false; this.blocked = false;
     }
     async init() {
-        await this.store.init();
+        await this.store.init(); await this.ledger.init();
         const saved = await readJson(path.join(this.root, 'settings.json'), {});
         for (const name of ['kiosk', 'alwaysOnTop', 'autoStart', 'muted']) if (typeof saved[name] === 'boolean') this.settings[name] = saved[name];
         if (Number.isSafeInteger(saved.displayId)) this.settings.displayId = saved.displayId;
@@ -33,14 +35,48 @@ export class PlayerRuntime {
             try {
                 this.configure();
                 this.syncer.active = await this.store.recover(m => validateManifest(m, this.identity.publicId));
-                this.schedule('sync', () => this.synchronize(), 50); this.schedule('heartbeat', () => this.heartbeat(), 100);
+                if(this.syncer.active)await this.seedLedger(this.syncer.active);
+                this.schedule('sync', () => this.synchronize(), 50); this.schedule('heartbeat', () => this.heartbeat(), 100);this.schedule('events',()=>this.uploadEvents(),1000);
             } catch (error) { this.error(error); }
         }
     }
     configure() {
         const api = new DeviceApi(this.identity.origin, { token: this.identity.token, allowLocalHttp: this.allowLocalHttp, onUnauthorized: code => { if (this.api === api) this.revoke(code); } });
         this.api = api;
-        this.syncer = new SyncManager({ api: this.api, store: this.store, publicId: this.identity.publicId, clock: this.clock, onPackage: () => this.notify() });
+        this.syncer = new SyncManager({ api: this.api, store: this.store, publicId: this.identity.publicId, clock: this.clock, onPackage: m => this.seedLedger(m) });
+    }
+    async seedLedger(manifest){
+        if(manifest.schemaVersion!==2)return;
+        const items=manifest.playlists.flatMap(p=>p.pages.flatMap(p=>p.zones.flatMap(z=>z.items)));
+        await this.ledger.seed(this.identity.publicId,items);
+    }
+    async uploadEvents(){
+        if(!this.api || this.blocked || this.stopped || this.uploading)return;
+        this.uploading=true;let delay=10000;
+        try{
+            const batch=this.ledger.pending(50,this.identity.publicId);
+            if(batch.length){const {data}=await this.api.json('/api/device/playback-events',{method:'POST',body:{events:batch.map(({device_public_id,...event})=>event)}});
+                if(!Array.isArray(data.acknowledged) || data.acknowledged.some(id=>!batch.some(e=>e.event_id===id)))throw Error('playback_ack_invalid');
+                await this.ledger.acknowledge(data.acknowledged);delay=this.ledger.pending(1,this.identity.publicId).length?2000:10000;
+            }
+            const applied=await readJson(path.join(this.root,'applied-playback.json'));
+            if(applied?.device===this.identity.publicId){await this.api.json('/api/device/playback-state',{method:'POST',body:{...applied.report,pending_events:this.ledger.pending(100000,this.identity.publicId).length}});}
+            this.eventFailures=0;
+        }catch(error){this.error(error);delay=backoff(this.eventFailures=(this.eventFailures??0)+1,error.retryAfter);}
+        finally{this.uploading=false;this.schedule('events',()=>this.uploadEvents(),delay);}
+    }
+    async applied(input){
+        if(this.blocked || !this.identity || this.syncer?.active?.schemaVersion!==2)return;
+        const segment=this.current();if(input?.revision!==this.syncer.active.revision || input?.playlistId!==(segment.playlist?.id??null) || input?.commandId!==(segment.commandId??null))throw Error('playback_applied_stale');
+        const report={revision:this.syncer.active.revision,playlist_id:segment.playlist?.id??null,command_id:segment.commandId??null};
+        await atomicWrite(path.join(this.root,'applied-playback.json'),JSON.stringify({device:this.identity.publicId,report}));
+        this.schedule('events',()=>this.uploadEvents(),1000);
+    }
+    async beginPlayback(input){
+        if(this.blocked || !this.identity || !this.syncer?.active || this.syncer.active.schemaVersion!==2)throw Error('playback_unavailable');
+        const segment=this.current(),page=segment.playlist?.pages.find(p=>p.id===input.pageId),zone=page?.zones.find(z=>z.id===input.zoneId && z.visible),item=zone?.items.find(i=>i.id===input.itemId);
+        if(!item || !item.available || (input.durationMs!==null && (!Number.isSafeInteger(input.durationMs)||input.durationMs<1||input.durationMs>86400000)) || (item.duration!==null && input.durationMs!==Math.round(item.duration*1000)))throw Error('playback_item_invalid');
+        return this.ledger.begin(this.identity.publicId,item,{revision:this.syncer.active.revision,playlist_id:segment.playlist.id,page_id:page.id,zone_id:zone.id,schedule_id:segment.schedule?.id??null,expected_duration_ms:input.durationMs});
     }
     schedule(name, task, delay) {
         clearTimeout(this.timers.get(name));
@@ -67,7 +103,7 @@ export class PlayerRuntime {
         await this.vault.save(identity); this.syncer?.cancel();
         for (const timer of this.timers.values()) clearTimeout(timer); this.timers.clear();
         this.identity = identity; this.blocked = false; await rm(path.join(this.root, 'blocked.json'), { force: true }); this.configure();
-        this.schedule('sync', () => this.synchronize(), 0); this.schedule('heartbeat', () => this.heartbeat(), 100); this.notify();
+        this.schedule('sync', () => this.synchronize(), 0); this.schedule('heartbeat', () => this.heartbeat(), 100);this.schedule('events',()=>this.uploadEvents(),1000); this.notify();
         } finally { this.activating = false; }
     }
     async synchronize() {
@@ -100,7 +136,7 @@ export class PlayerRuntime {
         const segment = this.current(), active = this.syncer?.active;
         return { version: this.version, configured: !!this.identity, deviceId: this.identity?.publicId ?? null, cmsUrl: this.identity?.origin ?? '', ...this.state,
             revision: active?.revision ?? null, settings: this.settings, pinConfigured: !!this.lock?.saved, operatorUnlocked: this.lock?.unlocked ?? true,
-            playback: { state: segment.state, schedule: segment.schedule ? { id: segment.schedule.id, name: segment.schedule.name } : null,
+            playback: { schemaVersion:active?.schemaVersion ?? 1, revision:active?.revision, commandId:segment.commandId??null,state: segment.state, schedule: segment.schedule ? { id: segment.schedule.id, name: segment.schedule.name } : null,
                 key: playbackKey(segment, active?.media ?? []), startUtc: segment.startUtc ?? null, utc: this.clock.now(),
                 layout: segment.playlist ? adaptPlaylist(segment.playlist, active.media) : null } };
     }

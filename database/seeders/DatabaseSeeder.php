@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             SchedulerPermissionSeeder::class,
             DevicePermissionSeeder::class,
             MenuSeeder::class,
+            PlaybackPermissionSeeder::class,
         ]);
     }
 }

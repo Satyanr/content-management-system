@@ -153,6 +153,15 @@ class PlaylistWindowEditor
         });
     }
 
+    public function updateItemLimit(int $playlistId, int $pageId, int $zoneId, int $itemId, $max): void
+    {
+        DB::transaction(function () use ($playlistId, $pageId, $zoneId, $itemId, $max) {
+            [, $page] = $this->page($playlistId, $pageId);
+            $valid = validator(['max_plays' => $max], ['max_plays' => 'required|integer|between:0,1000000000'])->validate();
+            $page->zones()->findOrFail($zoneId)->items()->findOrFail($itemId)->update($valid);
+        });
+    }
+
     public function updateItemDuration(int $playlistId, int $pageId, int $zoneId, int $itemId, $seconds): void
     {
         DB::transaction(function () use ($playlistId, $pageId, $zoneId, $itemId, $seconds) {

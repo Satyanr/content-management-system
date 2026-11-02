@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const source = fileURLToPath(new URL('../', import.meta.url));
 const ui = new Map([
     ['/index.html', ['renderer/index.html', 'text/html']], ['/app.js', ['renderer/app.js', 'text/javascript']], ['/style.css', ['renderer/style.css', 'text/css']],
+    ['/playback/device-engine.js',['playback/device-engine.js','text/javascript']],
     ['/playback/metadata.js', ['playback/metadata.js', 'text/javascript']],
     ...['studio-playback.js', 'studio-playback-renderer.js', 'studio-geometry.js'].map(name => ['/playback/vendor/' + name, ['playback/vendor/' + name, 'text/javascript']]),
 ]);

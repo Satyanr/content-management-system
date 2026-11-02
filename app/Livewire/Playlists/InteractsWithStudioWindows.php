@@ -76,6 +76,14 @@ trait InteractsWithStudioWindows
         return true;
     }
 
+    public function updateItemLimit(int $pageId, int $zoneId, int $itemId, $max): bool
+    {
+        $this->windowEditor($pageId)->updateItemLimit($this->playlistId, $pageId, $zoneId, $itemId, $max);
+        $this->dispatch('studio-playback-invalidated');
+
+        return true;
+    }
+
     public function updateItemDuration(int $pageId, int $zoneId, int $itemId, $seconds): bool
     {
         $this->windowEditor($pageId)->updateItemDuration($this->playlistId, $pageId, $zoneId, $itemId, $seconds);

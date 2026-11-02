@@ -1,22 +1,24 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\PlaylistController;
-use App\Http\Controllers\Admin\SchedulerController;
-use App\Http\Controllers\Admin\DeviceController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\MenuController;
-use App\Http\Controllers\Admin\CompanyController;
-use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\CompanyController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\LoginHistoryController;
-use App\Http\Controllers\Admin\WorkspaceController;
 use App\Http\Controllers\Admin\MediaAssetController;
-use App\Http\Controllers\Admin\MediaUploadController;
 use App\Http\Controllers\Admin\MediaStreamController;
+use App\Http\Controllers\Admin\MediaUploadController;
+use App\Http\Controllers\Admin\MenuController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\PlaylistController;
+use App\Http\Controllers\Admin\ProofOfPlayController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SchedulerController;
+use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WorkspaceController;
+use App\Services\PlaylistWorkspace;
+use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
@@ -24,6 +26,9 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        Route::get('/proof-of-play', [ProofOfPlayController::class, 'index'])->middleware('permission:playback.view')->name('proof-of-play.index');
+        Route::get('/proof-of-play/export', [ProofOfPlayController::class, 'export'])->middleware(['permission:playback.view', 'permission:playback.export'])->name('proof-of-play.export');
+        Route::post('/proof-of-play/reset', [ProofOfPlayController::class, 'reset'])->middleware(['permission:playback.view', 'permission:playback.reset'])->name('proof-of-play.reset');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::view('/profile', 'profile')->name('profile');
         Route::get('/users', [UserController::class, 'index'])
@@ -50,6 +55,11 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
         Route::get('/login-histories', [LoginHistoryController::class, 'index'])
             ->middleware('permission:login_histories.view')
             ->name('login-histories.index');
+        Route::get('/playlists/{playlist}/assignment', function (int $playlist) {
+            app(PlaylistWorkspace::class)->find($playlist);
+
+            return view('admin.playlists.assignment', ['playlistId' => $playlist]);
+        })->whereNumber('playlist')->middleware(['permission:playlists.view', 'permission:devices.view'])->name('playlists.assignment');
         Route::get('/playlists/{playlist}/studio', [PlaylistController::class, 'studio'])
             ->whereNumber('playlist')
             ->middleware('permission:playlists.view')
@@ -73,4 +83,4 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
             ->name('media-assets.stream');
     });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

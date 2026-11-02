@@ -98,7 +98,7 @@ class ScheduleTable extends Component
         $this->formCompanyId = $company;
         $this->conflicts = [];
         $this->conflictReview = false;
-        $this->form = ['name' => '', 'playlist_id' => '', 'schedule_type' => 'once', 'timezone' => $timezone, 'priority' => 0, 'is_active' => true,
+        $this->form = ['playback_mode' => 'persistent', 'target_type' => 'all', 'target_ids' => [], 'name' => '', 'playlist_id' => '', 'schedule_type' => 'once', 'timezone' => $timezone, 'priority' => 0, 'is_active' => true,
             'once_start' => $now->format('Y-m-d\TH:i'), 'once_end' => $now->addHour()->format('Y-m-d\TH:i'),
             'start_date' => $now->toDateString(), 'end_date' => '', 'start_time' => '09:00', 'end_time' => '10:00', 'weekdays' => [1, 2, 3, 4, 5]];
         $this->resetValidation();
@@ -113,7 +113,8 @@ class ScheduleTable extends Component
         $this->formCompanyId = $s->company_id;
         $this->conflicts = [];
         $this->conflictReview = false;
-        $this->form = $s->only(['name', 'playlist_id', 'schedule_type', 'timezone', 'priority', 'is_active']);
+        $this->form = $s->only(['playback_mode', 'target_type', 'target_ids', 'name', 'playlist_id', 'schedule_type', 'timezone', 'priority', 'is_active']);
+        $this->form['target_ids'] ??= [];
         $this->form += ['once_start' => $s->starts_at_utc?->setTimezone($s->timezone)->format('Y-m-d\TH:i') ?? '',
             'once_end' => $s->ends_at_utc?->setTimezone($s->timezone)->format('Y-m-d\TH:i') ?? '',
             'start_date' => $s->start_date ?? '', 'end_date' => $s->end_date ?? '',
@@ -137,7 +138,7 @@ class ScheduleTable extends Component
                 $this->addError('form.'.$field, $messages[0]);
             }
 
-return null;
+            return null;
         }
         $candidate = new Schedule($data);
         $candidate->id = $this->scheduleId;
@@ -340,6 +341,6 @@ return null;
         $at = $this->probeUtc ? CarbonImmutable::parse($this->probeUtc, 'UTC') : null;
         $playing = $company && $at ? $resolver->resolve($company, $at) : null;
 
-        return view('livewire.scheduler.schedule-table', compact('company','timezone','playlists','schedules','days','upcoming','at','playing'));
+        return view('livewire.scheduler.schedule-table', compact('company', 'timezone', 'playlists', 'schedules', 'days', 'upcoming', 'at', 'playing'));
     }
 }

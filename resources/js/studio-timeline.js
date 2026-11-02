@@ -1,4 +1,4 @@
-import { PlaybackEngine, trackSegments, positive } from './studio-playback.js';
+import { PlaybackEngine, trackSegments, positive, itemDuration } from './studio-playback.js';
 import { MetadataPool, PlaybackRenderer } from './studio-playback-renderer.js';
 export function formatTime(value) {
     const seconds=Math.max(0,Math.floor(Number(value)||0));
@@ -143,6 +143,11 @@ export function studioTimeline() {
             return page.zones.map(zone=>({zone,...trackSegments(zone,page,this.metadata,from,to)}));
         },
         isActiveSegment(segment,zoneId){const active=this.playback.windows.find(w=>w.zone.id===zoneId);return active?.item?.id===segment.item.id && this.playback.time>=segment.start && this.playback.time<segment.start+segment.duration;},
+        fileExceedsPage(id){
+            const page=this.playbackManifest?.pages.find(p=>p.zones.some(z=>z.items.some(i=>i.id===id)));
+            const item=page?.zones.flatMap(z=>z.items).find(i=>i.id===id);
+            return !!item && (itemDuration(item,this.metadata) ?? 0)>Number(page.duration);
+        },
         fileDurationLabel(id){
             const item=this.playbackManifest?.pages.flatMap(p=>p.zones).flatMap(z=>z.items).find(i=>i.id===id);
             return item?this.durationLabel(item):'Loading duration';

@@ -91,7 +91,7 @@ test('client identity query and bodies are rejected and schema is explicit', fun
     $this->getJson('/api/device/manifest?company_id='.$this->other->id)->assertUnprocessable();
     $this->getJson('/api/device/media/'.$this->asset->id.'?token=secret')->assertUnprocessable();
     $this->call('GET', '/api/device/manifest', [], [], [], ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token], '{"device_id":1}')->assertUnprocessable();
-    $this->withHeader('X-Player-Schema-Version', '2')->getJson('/api/device/manifest')->assertStatus(406)->assertJsonPath('error.code', 'unsupported_schema_version');
+    $this->withHeader('X-Player-Schema-Version', '3')->getJson('/api/device/manifest')->assertStatus(406)->assertJsonPath('error.code', 'unsupported_schema_version');
 });
 
 test('schedule priority ties gaps and upcoming playlists use the existing resolver', function () {

@@ -10,7 +10,7 @@ class DeviceRequestGuard
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (strlen($request->getContent()) > (int) config('devices.max_payload_bytes', 8192)) {
+        if (strlen($request->getContent()) > ($request->is('api/device/playback-events') ? 65536 : (int) config('devices.max_payload_bytes', 8192))) {
             return response()->json(['message' => 'Payload too large.'], 413);
         }
         if ($request->query->count()) {

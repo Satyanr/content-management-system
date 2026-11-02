@@ -7,4 +7,8 @@ for (const file of ['studio-playback.js', 'studio-playback-renderer.js', 'studio
     await copyFile(new URL('resources/js/' + file, root), new URL(file, target));
 }
 await copyFile(new URL('docs/player-api-v1.schema.json', root), new URL('../src/services/api/manifest.schema.json', import.meta.url));
-console.log('Prepared unchanged Studio playback modules and Player API v1 schema.');
+
+
+await copyFile(new URL('docs/player-api-v2.schema.json', root), new URL('../src/services/api/manifest-v2.schema.json', import.meta.url));
+
+console.log('Prepared shared Studio renderer modules and Player API v1/v2 schemas.');

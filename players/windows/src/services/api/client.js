@@ -13,8 +13,8 @@ export class DeviceApi {
         this.origin = cmsOrigin(origin, allowLocalHttp); Object.assign(this, { token, fetcher, onUnauthorized });
     }
     async request(endpoint, { method = 'GET', headers = {}, body, signal, authenticated = true } = {}) {
-        if (!/^\/api\/device\/(?:activate|heartbeat|manifest|media\/[0-9]+)$/.test(endpoint)) throw new ApiError('api_path_invalid');
-        const safeHeaders = { 'Accept': 'application/json', 'X-Player-Schema-Version': '1', ...headers };
+        if (!/^\/api\/device\/(?:activate|heartbeat|playback-events|playback-state|manifest|media\/[0-9]+)$/.test(endpoint)) throw new ApiError('api_path_invalid');
+        const safeHeaders = { 'Accept': 'application/json', 'X-Player-Schema-Version': '2', ...headers };
         if (authenticated) { if (!this.token) throw new ApiError('invalid_token', 401); safeHeaders.Authorization = 'Bearer ' + this.token; }
         if (body !== undefined) safeHeaders['Content-Type'] = 'application/json';
         let response;

@@ -7,6 +7,8 @@ const subscribe = (name, callback) => {
     return () => ipcRenderer.removeListener('player:' + name, listener);
 };
 contextBridge.exposeInMainWorld('player', Object.freeze({
+    applied:input=>invoke('playback-applied',input),
+    begin:input=>invoke('playback-begin',input),checkpoint:input=>invoke('playback-checkpoint',input),finish:input=>invoke('playback-finish',input),
     status: () => invoke('status'), activate: input => invoke('activate', input), unlock: pin => invoke('unlock', pin),
     sync: () => invoke('sync'), settings: input => invoke('settings', input), restart: () => invoke('restart'),
     reconnect: () => invoke('reconnect'),

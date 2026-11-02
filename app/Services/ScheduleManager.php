@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Device;
+use App\Models\DeviceGroup;
 use App\Models\Playlist;
 use App\Models\Schedule;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +40,20 @@ class ScheduleManager
         if (! $playlist) {
             throw ValidationException::withMessages(['playlist_id' => 'Choose an active Playlist in the current company.']);
         }
+        $switch = validator($input + ['playback_mode' => 'persistent', 'target_type' => 'all', 'target_ids' => []], [
+            'playback_mode' => 'required|in:legacy,persistent,temporary', 'target_type' => 'required|in:all,device,group',
+            'target_ids' => 'array|list|max:1000', 'target_ids.*' => 'integer|distinct|min:1',
+        ])->validate();
+        if ($switch['target_type'] !== 'all') {
+            $model = $switch['target_type'] === 'device' ? Device::class : DeviceGroup::class;
+            if (! $switch['target_ids'] || $model::where('company_id', $companyId)->whereIn('id', $switch['target_ids'])->count() !== count($switch['target_ids'])) {
+                throw ValidationException::withMessages(['target_ids' => 'Pilih target dari perusahaan aktif.']);
+            }
+        } else {
+            $switch['target_ids'] = [];
+        }
         $data = array_intersect_key($valid, array_flip(['name', 'playlist_id', 'schedule_type', 'timezone', 'priority', 'is_active']));
+        $data += $switch;
         $data += ['company_id' => $companyId, 'starts_at_utc' => null, 'ends_at_utc' => null, 'start_date' => null, 'end_date' => null, 'start_time' => null, 'end_time' => null, 'weekdays' => null];
         if ($weekly) {
             if ($valid['start_time'] === $valid['end_time']) {
@@ -72,7 +87,8 @@ class ScheduleManager
     public function save(int $companyId, ?int $id, array $input, int $creator): Schedule
     {
         return DB::transaction(function () use ($companyId, $id, $input, $creator) {
-            $data = $this->prepare($companyId, $input);
+            $existing = $id ? Schedule::forCompany($companyId)->findOrFail($id) : null;
+            $data = $this->prepare($companyId, $input + ['playback_mode' => $existing?->playback_mode ?? 'persistent', 'target_type' => $existing?->target_type ?? 'all', 'target_ids' => $existing?->target_ids ?? []]);
             // Lock the selected Playlist so active-state/deletion checks remain consistent through insert.
             Playlist::forCompany($companyId)->where('is_active', true)->lockForUpdate()->findOrFail($data['playlist_id']);
             if ($id) {

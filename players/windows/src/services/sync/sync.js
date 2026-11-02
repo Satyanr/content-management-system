@@ -62,7 +62,7 @@ export class SyncManager {
             if (signal.aborted) throw new ApiError('cancelled');
             await this.store.promote(final);
             this.active = final; this.etag = confirmed.response.headers.get('etag');
-            this.onPackage(final); await this.store.gc();
+            await this.onPackage(final); await this.store.gc();
         } finally { this.busy = false; }
     }
 }

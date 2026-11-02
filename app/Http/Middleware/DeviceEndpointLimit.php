@@ -14,7 +14,7 @@ class DeviceEndpointLimit
         $credential = $request->attributes->get('device_credential');
         abort_unless($credential, 401);
         $limit = match ($endpoint) {
-            'heartbeat' => 10, 'manifest' => 30, default => 600
+            'events' => 30, 'heartbeat' => 10, 'manifest' => 30, default => 600
         };
         $key = 'device-'.$endpoint.':'.$credential->device_id;
         if (RateLimiter::tooManyAttempts($key, $limit)) {

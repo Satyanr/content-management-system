@@ -1,7 +1,7 @@
 {
   "name": "cms-signage-player",
-  "version": "1.0.1",
-  "description": "Windows digital signage player for CMS Player API v1",
+  "version": "2.0.0",
+  "description": "Windows digital signage player for CMS Player API v2, durable quota and Proof of Play",
   "author": "CMS Digital Signage",
   "private": true,
   "type": "module",

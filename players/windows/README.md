@@ -1,4 +1,4 @@
-# CMS Signage Player — Windows v1
+# CMS Signage Player — Windows Player v2
 
 Electron app for Windows 10/11 x64. Dependencies and builds are isolated from Laravel/Vite.
 
@@ -28,10 +28,19 @@ npm.cmd run pack      # unpacked executable
 npm.cmd run dist      # NSIS x64 installer, no publishing
 ```
 
-Installer: `dist/CMS-Signage-Player-1.0.1-x64-Setup.exe`. Build is unsigned unless your own valid signing certificate is configured. Installer/uninstaller, Start Menu entry and optional desktop shortcut settings are configured via electron-builder. Desktop shortcut is off by default. User data remains across upgrades and uninstall.
+Installer: `dist/CMS-Signage-Player-2.0.0-x64-Setup.exe`. Build is unsigned unless your own valid signing certificate is configured. Installer/uninstaller, Start Menu entry and optional desktop shortcut settings are configured via electron-builder. Desktop shortcut is off by default. User data remains across upgrades and uninstall.
 
-Version 1.0.1 supports the optional Player API v1 item `mediaTransform` field (zoom, pan, fit/crop/stretch). The adapter and shared Studio renderer apply the same transform during online and cached playback. Older manifests without this field retain their zone fit mode. Upgrade the Player to apply newly configured media transforms; the protocol remains schemaVersion 1. See [UI and transform guide](../../docs/ui-simplification-beginner-guide.md).
+Version 2.0.0 requests Player API v2 for always-on primary Playlists, persistent/temporary schedule switching, per-item play limits, durable counters and Proof of Play uploads. Old v1 cached manifests remain supported; v1 API semantics stay unchanged. Update CMS and Player together. Media zoom/pan/fit uses the same shared Studio renderer. See [always-on and Proof of Play guide](../../docs/always-on-playlist-proof-of-play.md) and [UI transform guide](../../docs/ui-simplification-beginner-guide.md).
 
 `prepare:shared` copies the existing Studio playback modules and manifest schema without changing CMS sources. Run scripts from this repository so those sources are available; generated copies are included in the packaged app. Lockfile is committed as source; node_modules/dist/test-results are ignored.
 
 Full architecture, test results, storage paths, offline/revocation policy, clean uninstall, manual acceptance checks and Android preparation: [docs/windows-player-step8.md](../../docs/windows-player-step8.md).
+
+Real Laravel + Electron acceptance (creates and cleans tagged temporary local fixtures; local MySQL must be available):
+
+```powershell
+$env:CMS_REAL_ACCEPTANCE = '1'
+npx.cmd playwright test tests/e2e/always-on-localhost.spec.js
+```
+
+Playback counters and unsent events live in userData/playback/playback.journal, outside media cache GC. Do not manually delete this journal to clean media cache. It contains no device credential. A reset through CMS uses a new counter epoch and preserves history.
