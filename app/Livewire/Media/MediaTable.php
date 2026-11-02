@@ -3,6 +3,7 @@
 namespace App\Livewire\Media;
 
 use App\Models\MediaAsset;
+use App\Models\PlaylistZoneItem;
 use App\Models\MediaFolder;
 use App\Services\WorkspaceService;
 use Illuminate\Support\Facades\Auth;
@@ -413,7 +414,14 @@ class MediaTable extends Component
 
         $media = MediaAsset::query()->forCompany($workspaceService->companyId())->findOrFail($id);
 
-        $this->deleteMediaFile($media);
+        if (PlaylistZoneItem::where('media_asset_id', $media->id)->exists()) {
+            session()->flash('error', 'Media is used in a Playlist. Remove its Window items before deleting the file.');
+            return;
+        }
+
+        if (! $this->deleteMediaFile($media)) {
+            return;
+        }
 
         session()->flash('success', 'Media deleted successfully.');
     }
@@ -430,8 +438,15 @@ class MediaTable extends Component
 
         $mediaAssets = MediaAsset::query()->forCompany($workspaceService->companyId())->whereKey($ids->all())->get();
 
+        if (PlaylistZoneItem::whereIn('media_asset_id', $mediaAssets->pluck('id'))->exists()) {
+            session()->flash('error', 'Some selected media are used in a Playlist. Remove their Window items before deleting files.');
+            return;
+        }
+
         foreach ($mediaAssets as $media) {
-            $this->deleteMediaFile($media);
+            if (! $this->deleteMediaFile($media)) {
+                return;
+            }
         }
 
         $this->clearSelection();
@@ -439,16 +454,27 @@ class MediaTable extends Component
         session()->flash('success', 'Selected media deleted successfully.');
     }
 
-    private function deleteMediaFile(MediaAsset $media): void
+    private function deleteMediaFile(MediaAsset $media): bool
     {
         $disk = $media->disk;
         $path = $media->path;
 
-        $media->deleteOrFail();
+        try {
+            $media->deleteOrFail();
+        } catch (\Illuminate\Database\QueryException $exception) {
+            // A Playlist may have referenced the asset after the earlier check.
+            if ($exception->getCode() !== '23000') {
+                throw $exception;
+            }
+            session()->flash('error', 'Media is referenced by a Playlist and cannot be deleted.');
+            return false;
+        }
 
         if (Storage::disk($disk)->exists($path)) {
             Storage::disk($disk)->delete($path);
         }
+
+        return true;
     }
 
     /*

@@ -1,4 +1,4 @@
-<form wire:submit="save" @input="dirty = true" class="space-y-5">
+<form @submit.prevent="saveProperties()" @input="dirty = true" class="space-y-5">
     <fieldset @cannot('playlists.edit') disabled @endcannot class="space-y-4">
         <legend class="mb-3 text-sm font-semibold">Canvas Properties</legend>
         <p class="text-xs text-slate-400">Output pixels. Changing zoom does not change the output resolution.</p>
@@ -22,5 +22,7 @@
             <label class="studio-label block">Duration (seconds)<input type="number" min="1" max="86400" required wire:model="pageDuration" class="studio-input mt-1" /></label>
         </fieldset>
     @endif
-    @can('playlists.edit') <button type="submit" wire:loading.attr="disabled" class="studio-button w-full justify-center !border-cyan-600 !bg-cyan-600 text-white"><x-studio-icon name="save" />Save Properties</button> @endcan
+    @can('playlists.edit') <button type="submit" wire:loading.attr="disabled" :disabled="busy || !!gesture" class="studio-button w-full justify-center !border-cyan-600 !bg-cyan-600 text-white"><x-studio-icon name="save" />Save Properties</button> @endcan
 </form>
+
+@include('livewire.playlists.studio.window-properties')

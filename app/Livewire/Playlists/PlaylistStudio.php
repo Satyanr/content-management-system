@@ -4,6 +4,7 @@ namespace App\Livewire\Playlists;
 
 use App\Models\MediaAsset;
 use App\Models\Playlist;
+use App\Models\PlaylistZone;
 use App\Services\PlaylistWorkspace;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -13,6 +14,7 @@ use Livewire\WithPagination;
 
 class PlaylistStudio extends Component
 {
+    use InteractsWithStudioWindows;
     use WithPagination;
 
     #[Locked]
@@ -65,7 +67,7 @@ class PlaylistStudio extends Component
         $this->resetValidation();
     }
 
-    public function save(): void
+    public function save(bool $allowOverflow = false): bool
     {
         Gate::authorize('playlists.edit');
         $this->playlist();
@@ -84,8 +86,9 @@ class PlaylistStudio extends Component
             ];
         }
         $data = $this->validate($rules);
-        DB::transaction(function () use ($data) {
+        DB::transaction(function () use ($data, $allowOverflow) {
             $playlist = $this->playlist(true);
+            $this->checkCanvasBounds($playlist, (int) $data['canvasWidth'], (int) $data['canvasHeight'], $allowOverflow);
             $playlist->update([
                 'name' => $data['name'],
                 'canvas_width' => $data['canvasWidth'],
@@ -100,6 +103,8 @@ class PlaylistStudio extends Component
         });
         $this->dispatch('studio-saved', width: (int) $data['canvasWidth'], height: (int) $data['canvasHeight']);
         session()->flash('success', 'Playlist and page properties saved.');
+
+        return true;
     }
 
     public function addPage(): void
@@ -161,7 +166,7 @@ class PlaylistStudio extends Component
         $playlist = $this->playlist();
         $pages = $playlist->pages()->withCount('zones')->get();
         $activePage = $this->activePageId === null ? null : $playlist->pages()
-            ->with('zones')->findOrFail($this->activePageId);
+            ->with(['zones.items.mediaAsset' => fn ($q) => $q->where('company_id', $playlist->company_id)])->findOrFail($this->activePageId);
         $media = null;
         if (Gate::allows('media.view')) {
             $media = MediaAsset::query()->where('company_id', $playlist->company_id)
@@ -171,6 +176,21 @@ class PlaylistStudio extends Component
                 ->latest()->paginate(12, ['*'], 'mediaPage');
         }
 
-        return view('livewire.playlists.playlist-studio', compact('playlist', 'pages', 'activePage', 'media'));
+        $editorData = [
+            'pageId' => $this->activePageId,
+            'width' => $playlist->canvas_width, 'height' => $playlist->canvas_height,
+            'canEdit' => Gate::allows('playlists.edit'), 'canMedia' => Gate::allows('media.view'),
+            'extentX' => (int) PlaylistZone::whereIn('playlist_page_id', $pages->pluck('id'))->selectRaw('MAX(x + width) AS extent')->value('extent'),
+            'extentY' => (int) PlaylistZone::whereIn('playlist_page_id', $pages->pluck('id'))->selectRaw('MAX(y + height) AS extent')->value('extent'),
+            'zones' => $activePage?->zones->map(fn ($zone) => $zone->only(['id', 'name', 'x', 'y', 'width', 'height', 'z_index', 'keep_aspect_ratio', 'fit_mode', 'is_visible', 'is_locked']) + [
+                'items' => $zone->items->map(fn ($item) => [
+                    'id' => $item->id, 'sort_order' => $item->sort_order,
+                    'title' => Gate::allows('media.view') ? ($item->mediaAsset?->title ?? 'Unavailable media') : 'Media',
+                ])->values()->all(),
+            ])->values()->all() ?? [],
+        ];
+        $this->dispatch('studio-editor-sync', data: $editorData);
+
+        return view('livewire.playlists.playlist-studio', compact('playlist', 'pages', 'activePage', 'media', 'editorData'));
     }
 }

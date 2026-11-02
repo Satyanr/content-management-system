@@ -1,6 +1,6 @@
 <header class="shrink-0 border-b border-slate-700 bg-slate-800">
     <div class="flex flex-wrap items-center gap-3 px-4 py-3">
-        <a href="{{ route('admin.playlists.index') }}" class="studio-button" title="Back to Playlist" @click="if (dirty && !confirm('Leave without saving properties?')) $event.preventDefault()"><x-studio-icon name="back" /><span class="hidden xl:inline">Playlists</span></a>
+        <a href="{{ route('admin.playlists.index') }}" class="studio-button" title="Back to Playlist" @click="if ((dirty || zoneDirty || busy || gesture) && !confirm('Leave without saving properties?')) $event.preventDefault()"><x-studio-icon name="back" /><span class="hidden xl:inline">Playlists</span></a>
         <div class="flex min-w-0 flex-1 items-center gap-2">
             <x-studio-icon name="page" class="h-5 w-5 text-cyan-300" />
             <span class="hidden text-sm text-slate-400 lg:inline">Playlist Studio /</span>
@@ -8,7 +8,7 @@
         </div>
         <button x-ref="previewTrigger" type="button" class="studio-button" title="Preview saved layout" @click="openPreview()"><x-studio-icon name="eye" /><span class="hidden sm:inline">Preview Layout</span></button>
         @can('playlists.edit')
-            <button type="button" class="studio-button !border-cyan-600 !bg-cyan-600 text-white hover:!bg-cyan-500" wire:click="save" wire:loading.attr="disabled"><x-studio-icon name="save" />Save</button>
+            <button type="button" class="studio-button !border-cyan-600 !bg-cyan-600 text-white hover:!bg-cyan-500" @click="saveAll()" :disabled="busy || !!gesture" wire:loading.attr="disabled"><x-studio-icon name="save" />Save</button>
         @else <span class="text-xs text-slate-400">View only</span> @endcan
     </div>
     <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-700/70 px-4 py-2 text-xs">
@@ -19,6 +19,9 @@
             <span class="w-12 text-center tabular-nums" x-text="Math.round(scale * 100) + '%'"></span>
             <button type="button" class="studio-button" aria-label="Zoom in" title="Zoom in" @click="zoom(0.05)" :disabled="scale >= 2"><x-studio-icon name="plus" /></button>
             <button type="button" class="studio-button" @click="fit()" title="Fit canvas to available area"><x-studio-icon name="fit" />Fit</button>
+            <label class="flex items-center gap-1 text-slate-300"><input type="checkbox" x-model="snapEdges" class="rounded">Snap edges</label>
+            <label class="flex items-center gap-1 text-slate-300"><input type="checkbox" x-model="gridEnabled" class="rounded">Grid</label>
+            <input aria-label="Grid size in output pixels" title="Grid size (px)" type="number" min="1" max="1000" x-model.number="gridSize" class="studio-input !w-16 !py-1 !text-xs">
             <span class="ml-2 text-slate-400">{{ $playlist->canvas_width }} &times; {{ $playlist->canvas_height }} px</span>
         </div>
         <div class="relative flex gap-2">
