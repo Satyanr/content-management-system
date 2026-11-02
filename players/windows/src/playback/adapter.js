@@ -6,6 +6,7 @@ export function adaptPlaylist(layout, media) {
                 visible: zone.visible, fit_mode: zone.fit_mode, items: zone.items.map(item => {
                     const asset = assets.get(item.mediaId);
                     return { id: item.id, sort_order: item.sort_order, title: item.title, type: item.type, duration: item.duration, knownDuration: item.knownDuration,
+                        ...(item.mediaTransform ? { mediaTransform: item.mediaTransform } : {}),
                         available: !!asset && item.available, src: asset ? 'signage-media://cache/' + asset.checksum.value : null };
                 }) })) })) };
 }

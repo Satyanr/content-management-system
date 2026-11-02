@@ -24,7 +24,7 @@ class PlaylistLayout
                     'id' => $zone->id, 'name' => $zone->name,
                     'x' => $zone->x, 'y' => $zone->y, 'width' => $zone->width, 'height' => $zone->height,
                     'z_index' => $zone->z_index, 'visible' => $zone->is_visible, 'fit_mode' => $zone->fit_mode, 'keep_aspect_ratio' => $zone->keep_aspect_ratio,
-                    'items' => $zone->items->sortBy([['sort_order', 'asc'], ['id', 'asc']])->map($item)->values()->all(),
+                    'items' => $zone->items->sortBy([['sort_order', 'asc'], ['id', 'asc']])->map(fn ($entry) => $item($entry, $zone))->values()->all(),
                 ])->values()->all(),
             ])->values()->all(),
         ];

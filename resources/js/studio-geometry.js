@@ -48,6 +48,14 @@ export function resizeBox(box, handle, dx, dy, canvas, keepRatio, grid = 0, thre
 }
 export function objectFit(mode) { return mode === 'stretch' ? 'fill' : mode === 'cover' ? 'cover' : 'contain'; }
 
+// Media offsets are percentages of the Window, independent of output-pixel geometry.
+export function mediaTransformStyle(value = {}, fallback = 'contain') {
+    const number = (key, defaultValue, min, max) => Number.isFinite(Number(value?.[key])) ? clamp(Number(value[key]), min, max) : defaultValue;
+    const fit = ['contain','cover','stretch'].includes(value?.fit_mode) ? value.fit_mode : fallback;
+    const scale = number('scale',1,1,5), x = number('offset_x',0,-100,100), y = number('offset_y',0,-100,100);
+    return { objectFit: value?.keep_aspect_ratio === false ? 'fill' : objectFit(fit), transform: `translate(${x}%, ${y}%) scale(${scale})`, transformOrigin: 'center center' };
+}
+
 // UUID is a retry key, never an authorization credential; support local HTTP development hosts too.
 export function requestToken() {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();

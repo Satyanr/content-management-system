@@ -59,7 +59,7 @@ test('Seek locates Page, item and local time, preserving pause and rapid seek de
 test('Unknown Auto metadata never receives a fabricated duration and errors do not hang other Windows',()=>{
     const unknown=video(9,null,null),input=manifest();input.pages[1].zones[0].items=[unknown,image(10,2)];
     const {engine,at}=clockFixture(input);engine.play();
-    let s=at(1);assert.equal(s.windows[0].state,'loading');assert.equal(s.windows[1].state,'ready');
+    let s=at(1);assert.equal(s.windows[0].state,'ready');assert.equal(s.windows[0].item.id,10);assert.equal(s.windows[1].state,'ready');
     assert.equal(itemDuration(unknown),null);
     engine.setMetadata(unknown.src,{status:'ready',duration:6.25});assert.equal(engine.snapshot().windows[0].item.id,9);
     engine.setMetadata(unknown.src,{status:'error'});s=engine.snapshot();assert.equal(s.windows[0].item.id,10);
@@ -229,4 +229,56 @@ test('Automatic Page end interrupts a long video and releases its source and eve
     f.at(15.1);f.draw();assert.equal(f.engine.snapshot().page.id,2);assert.equal(node.paused,true);assert.equal(node.src,undefined);
     for(const callbacks of node.listeners.values())assert.equal(callbacks.size,0);
     f.renderer.destroy();f.engine.destroy();
+});
+
+test('Default metadata timers never borrow browser-native functions onto MetadataPool',()=>{
+    const originalSet=globalThis.setTimeout,originalClear=globalThis.clearTimeout;
+    const results=[],nodes=[];
+    globalThis.setTimeout=function(){assert.ok(this===undefined || this===globalThis,'Illegal invocation: foreign timer receiver');return 42;};
+    globalThis.clearTimeout=function(){assert.ok(this===undefined || this===globalThis,'Illegal invocation: foreign clear receiver');};
+    let pool;
+    try {
+        pool=new MetadataPool({createVideo:()=>{const node=new Node('video');nodes.push(node);return node;},onResult:(_src,info)=>results.push(info)});
+        assert.doesNotThrow(()=>pool.load(orderedManifest(manifest())));
+        nodes[0].duration=2.5;nodes[0].fire('loadedmetadata');assert.equal(results.at(-1).duration,2.5);
+        assert.doesNotThrow(()=>pool.destroy());
+    } finally { globalThis.setTimeout=originalSet;globalThis.clearTimeout=originalClear; }
+});
+
+test('Stalled and waiting events retain a bounded timeout, and late events cannot restore failed metadata',()=>{
+    const node=new Node('video'),events=[],results=[];let deadline;
+    const pool=new MetadataPool({createVideo:()=>node,setTimer:fn=>(deadline=fn,1),clearTimer:()=>{},onResult:(_src,info)=>results.push(info),onDiagnostic:info=>events.push(info)});
+    const input=orderedManifest(manifest());input.pages[0].zones[0].items=[video(99,null,null)];pool.load(input);
+    const loaded=[...node.listeners.get('loadedmetadata')][0];
+    node.fire('waiting');node.fire('stalled');assert.equal(results.at(-1).status,'loading');deadline();
+    assert.equal(results.at(-1).status,'error');assert.match(results.at(-1).message,/timed out/);
+    const count=results.length;loaded();assert.equal(results.length,count);assert.equal(node.src,undefined);
+    assert.ok(events.some(info=>info.event==='timeout'));pool.destroy();
+});
+
+test('Only-unknown Auto becomes an explicit error, while known items in the same Window keep playing',()=>{
+    const unknown=video(99,null,null),sameWindow=zone(1,[unknown,image(2,3)]);
+    assert.equal(windowAt(sameWindow,1).item.id,2);
+    const pending=trackSegments(sameWindow,{start:0,duration:15},{},0,15);
+    assert.equal(pending.pending,true);assert.ok(pending.segments.length>0);
+    const onlyUnknown=zone(2,[unknown]);assert.equal(windowAt(onlyUnknown,1).state,'loading');
+    const failed=windowAt(onlyUnknown,1,{[unknown.src]:{status:'error',message:'Metadata timed out'}});
+    assert.equal(failed.state,'error');assert.match(failed.message,/timed out/);assert.equal(itemDuration(unknown),null);
+});
+
+test('Media decode errors are specific and diagnostics never include source URL or credentials',()=>{
+    const node=new Node('video'),diagnostics=[],results=[];node.error={code:4};
+    const pool=new MetadataPool({createVideo:()=>node,onDiagnostic:info=>diagnostics.push(info),onResult:(_src,info)=>results.push(info)});
+    pool.load(orderedManifest(manifest()));node.fire('error');assert.match(results.at(-1).message,/codec.*unsupported/);
+    for(const entry of diagnostics){assert.equal('src' in entry,false);assert.equal('url' in entry,false);}
+    assert.equal(diagnostics.at(-1).errorCode,4);pool.destroy();
+});
+
+test('Playback applies item zoom pan and crop without changing Window geometry',()=>{
+    const input=manifest(),transform={scale:2,offset_x:20,offset_y:-15,fit_mode:'cover',keep_aspect_ratio:true};
+    input.pages[1].zones[0].items=[{...video(1,15,4),mediaTransform:transform}];
+    const geometry=structuredClone(input.pages[1].zones[0]);const f=renderFixture(input);f.engine.seek(1);f.draw();
+    const node=f.nodes.find(n=>n.tag==='video');assert.equal(node.style.transform,'translate(20%, -15%) scale(2)');assert.equal(node.style.objectFit,'cover');
+    assert.equal(f.renderer.entries.get(1).box.style.width,100*geometry.width/input.width+'%');
+    assert.equal(input.pages[1].zones[0].width,geometry.width);f.renderer.destroy();f.engine.destroy();
 });

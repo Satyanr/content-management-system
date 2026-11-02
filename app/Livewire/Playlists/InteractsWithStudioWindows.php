@@ -11,6 +11,25 @@ use Illuminate\Validation\ValidationException;
 
 trait InteractsWithStudioWindows
 {
+    public function createWindow(int $pageId): bool
+    {
+        $zone = $this->windowEditor($pageId)->create($this->playlistId, $pageId);
+        $this->dispatch('studio-select-window', id: $zone->id);
+        $this->dispatch('studio-playback-invalidated');
+        session()->flash('success', 'Window baru dibuat. Tambahkan media untuk mengisinya.');
+
+        return true;
+    }
+
+    public function updateMediaTransform(int $pageId, int $zoneId, int $itemId, array $transform): bool
+    {
+        $this->windowEditor($pageId)->transform($this->playlistId, $pageId, $zoneId, $itemId, $transform);
+        $this->dispatch('studio-playback-invalidated');
+        session()->flash('success', 'Ukuran dan posisi isi media disimpan.');
+
+        return true;
+    }
+
     private function windowEditor(int $pageId): PlaylistWindowEditor
     {
         Gate::authorize('playlists.edit');

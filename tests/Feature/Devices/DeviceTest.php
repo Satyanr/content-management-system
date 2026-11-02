@@ -232,7 +232,7 @@ test('view-only cannot mutate Devices Groups or secrets', function () {
 
 test('All Companies inactive workspaces and stale forms cannot mutate Devices', function () {
     $this->user->assignRole(Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']));
-    Livewire::test(DeviceTable::class)->assertSee('Select a company workspace')->call('openCreate')->assertForbidden();
+    Livewire::test(DeviceTable::class)->assertSee('Pilih workspace perusahaan')->call('openCreate')->assertForbidden();
     session()->put(WorkspaceService::SESSION_KEY, $this->company->id);
     $component = Livewire::test(DeviceTable::class)->call('openCreate')->set('form', deviceForm());
     session()->put(WorkspaceService::SESSION_KEY, $this->other->id);
@@ -284,7 +284,7 @@ test('admin actions audit the selected Company rather than the super-admin home 
 test('Device routes list filters sorting pagination and group detail render company data', function () {
     $this->seed(MenuSeeder::class);
     $this->get('/admin/devices')->assertOk()->assertSee(route('admin.devices.index'));
-    Livewire::test(DeviceTable::class)->set('view', 'list')->assertSee('Lobby Screen')->assertDontSee('Foreign Screen')->set('platformFilter', 'android')->assertSee('No Devices found.')->set('platformFilter', '')->set('sortBy', 'last_seen_at')->set('sortDirection', 'desc')->assertSee('Lobby Screen');
+    Livewire::test(DeviceTable::class)->set('view', 'list')->assertSee('Lobby Screen')->assertDontSee('Foreign Screen')->set('platformFilter', 'android')->assertSee('Belum ada perangkat. Klik Tambah Perangkat untuk memulai.')->set('platformFilter', '')->set('sortBy', 'last_seen_at')->set('sortDirection', 'desc')->assertSee('Lobby Screen');
     $this->get(route('admin.devices.show', $this->device->public_id))->assertOk()->assertSee('Never connected');
 });
 
@@ -369,11 +369,11 @@ test('malformed JSON and activation for inactive Company are rejected without cr
 
 test('connection filters agree with server freshness and credential state', function () {
     $token = activateFixture($this);
-    Livewire::test(DeviceTable::class)->set('statusFilter', 'never')->assertSee('Lobby Screen')->set('statusFilter', 'online')->assertSee('No Devices found.');
+    Livewire::test(DeviceTable::class)->set('statusFilter', 'never')->assertSee('Lobby Screen')->set('statusFilter', 'online')->assertSee('Belum ada perangkat. Klik Tambah Perangkat untuk memulai.');
     $this->withToken($token)->postJson('/api/device/heartbeat', [])->assertOk();
-    Livewire::test(DeviceTable::class)->set('statusFilter', 'online')->assertSee('Lobby Screen')->set('statusFilter', 'offline')->assertSee('No Devices found.');
+    Livewire::test(DeviceTable::class)->set('statusFilter', 'online')->assertSee('Lobby Screen')->set('statusFilter', 'offline')->assertSee('Belum ada perangkat. Klik Tambah Perangkat untuk memulai.');
     CarbonImmutable::setTestNow(CarbonImmutable::now('UTC')->addSeconds(181));
     Livewire::test(DeviceTable::class)->set('statusFilter', 'offline')->assertSee('Lobby Screen');
     app(DeviceLifecycle::class)->revoke($this->company->id, $this->device->id);
-    Livewire::test(DeviceTable::class)->set('statusFilter', 'revoked')->assertSee('Lobby Screen')->set('statusFilter','online')->assertSee('No Devices found.');
+    Livewire::test(DeviceTable::class)->set('statusFilter', 'revoked')->assertSee('Lobby Screen')->set('statusFilter','online')->assertSee('Belum ada perangkat. Klik Tambah Perangkat untuk memulai.');
 });

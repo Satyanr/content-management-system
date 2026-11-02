@@ -36,6 +36,7 @@ export function studioInteractions() {
             this.pageId = data.pageId; this.canEdit = data.canEdit; this.canMedia = data.canMedia;
             this.extentX = data.extentX; this.extentY = data.extentY;
             this.zones = Object.fromEntries(data.zones.map(z => [z.id, z]));
+            this.syncMediaSelection?.();
             if (this.selectedZoneId && !this.zones[this.selectedZoneId]) { this.selectedZoneId = null; this.zoneForm = null; this.zoneDirty = false; }
             if (this.selectedZoneId && !this.zoneDirty) this.zoneForm = copy(this.zones[this.selectedZoneId]);
         },
@@ -43,13 +44,17 @@ export function studioInteractions() {
             this.selectedZoneId = id; this.zoneDirty = false;
             if (this.zones[id]) this.zoneForm = copy(this.zones[id]);
             this.tab = 'properties'; this.showProperties = true;
+            this.syncMediaSelection?.();
         },
         selectWindow(id) {
-            if (this.busy || this.gesture) return;
-            if (this.zoneDirty && id !== this.selectedZoneId && !window.confirm('Discard unsaved Window properties?')) return;
+            if (this.busy || this.gesture) return false;
+            if(this.mediaDirty && id!==this.selectedZoneId){if(!window.confirm('Buang perubahan isi media yang belum disimpan?'))return false;this.mediaDirty=false;}
+            if (this.zoneDirty && id !== this.selectedZoneId && !window.confirm('Buang perubahan Window yang belum disimpan?')) return false;
             if (this.zoneDirty && id === this.selectedZoneId) return;
             this.selectedZoneId = id; this.zoneForm = this.zones[id] ? copy(this.zones[id]) : null; this.zoneDirty = false;
+            this.syncMediaSelection?.();
             if (id) { this.tab = 'properties'; this.showProperties = true; }
+            return true;
         },
         async perform(action, { refreshForm = true } = {}) {
             if (this.busy) return false;
@@ -62,7 +67,7 @@ export function studioInteractions() {
                 if (lastData) this.syncEditor(lastData);
                 return result === true;
             } catch (e) {
-                this.error = 'The change could not be saved. Check your connection, permissions and current workspace.';
+                this.error = 'Perubahan belum tersimpan. Periksa koneksi, izin akun, dan workspace yang dipilih.';
                 if (lastData) this.syncEditor(lastData);
                 return false;
             } finally {
@@ -71,10 +76,10 @@ export function studioInteractions() {
             }
         },
         windowStyle(id) {
-            const z = this.zones[id];
+            const z = this.selectedZoneId===id && this.zoneDirty ? this.zoneForm : this.zones[id];
             return z ? { left: z.x + 'px', top: z.y + 'px', width: z.width + 'px', height: z.height + 'px', zIndex: z.z_index, display: z.is_visible ? '' : 'none', outline: this.selectedZoneId === id ? `${2 / this.scale}px solid #22d3ee` : '1px solid #64748b' } : {};
         },
-        fitMedia(id) { return { objectFit: objectFit(this.zones[id]?.fit_mode), width: '100%', height: '100%' }; },
+        fitMedia(id) { return this.editorMediaStyle?.(id) ?? { objectFit: objectFit(this.zones[id]?.fit_mode), width: '100%', height: '100%' }; },
         startMedia(event, media) {
             if (!this.canEdit || !this.canMedia || this.busy) { event.preventDefault(); return; }
             this.dragMedia = media;
@@ -174,6 +179,7 @@ export function studioInteractions() {
         },
         async saveAll() {
             if (this.busy || this.gesture) return;
+            if(this.mediaDirty && !(await this.saveMedia()))return;
             if (this.zoneDirty && !(await this.saveWindow())) return;
             await this.saveProperties();
         },

@@ -18,6 +18,7 @@
             </div>
 
             <div class="flex items-center gap-3">
+                <button type="button" x-data @click="$dispatch('cms-guide-open')" title="Buka panduan penggunaan" class="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50">? <span class="hidden sm:inline">Bantuan</span></button>
                 <x-admin.company-indicator />
 
                 <span class="hidden sm:block text-sm text-gray-600">
@@ -29,7 +30,7 @@
 
                     <button type="submit"
                         class="text-sm px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-700">
-                        Logout
+                        Keluar
                     </button>
                 </form>
             </div>

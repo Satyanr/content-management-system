@@ -5,6 +5,7 @@ namespace App\Livewire\Playlists;
 use App\Models\MediaAsset;
 use App\Models\Playlist;
 use App\Models\PlaylistZone;
+use App\Services\MediaTransform;
 use App\Services\PlaylistWorkspace;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -188,6 +189,9 @@ class PlaylistStudio extends Component
             'zones' => $activePage?->zones->map(fn ($zone) => $zone->only(['id', 'name', 'x', 'y', 'width', 'height', 'z_index', 'keep_aspect_ratio', 'fit_mode', 'is_visible', 'is_locked']) + [
                 'items' => $zone->items->map(fn ($item) => [
                     'id' => $item->id, 'sort_order' => $item->sort_order,
+                    'mediaTransform' => MediaTransform::read($item->settings, $zone->fit_mode),
+                    'type' => Gate::allows('media.view') ? $item->mediaAsset?->type : null,
+                    'src' => Gate::allows('media.view') && $item->mediaAsset ? route('admin.media-assets.stream', $item->mediaAsset->id) : null,
                     'duration' => $item->duration_seconds ?? ($item->mediaAsset?->type === 'image' ? 10 : null),
                     'title' => Gate::allows('media.view') ? ($item->mediaAsset?->title ?? 'Unavailable media') : 'Media',
                 ])->values()->all(),

@@ -28,7 +28,9 @@ npm.cmd run pack      # unpacked executable
 npm.cmd run dist      # NSIS x64 installer, no publishing
 ```
 
-Installer: `dist/CMS-Signage-Player-1.0.0-x64-Setup.exe`. Build is unsigned unless your own valid signing certificate is configured. Installer/uninstaller, Start Menu entry and optional desktop shortcut settings are configured via electron-builder. Desktop shortcut is off by default. User data remains across upgrades and uninstall.
+Installer: `dist/CMS-Signage-Player-1.0.1-x64-Setup.exe`. Build is unsigned unless your own valid signing certificate is configured. Installer/uninstaller, Start Menu entry and optional desktop shortcut settings are configured via electron-builder. Desktop shortcut is off by default. User data remains across upgrades and uninstall.
+
+Version 1.0.1 supports the optional Player API v1 item `mediaTransform` field (zoom, pan, fit/crop/stretch). The adapter and shared Studio renderer apply the same transform during online and cached playback. Older manifests without this field retain their zone fit mode. Upgrade the Player to apply newly configured media transforms; the protocol remains schemaVersion 1. See [UI and transform guide](../../docs/ui-simplification-beginner-guide.md).
 
 `prepare:shared` copies the existing Studio playback modules and manifest schema without changing CMS sources. Run scripts from this repository so those sources are available; generated copies are included in the packaged app. Lockfile is committed as source; node_modules/dist/test-results are ignored.
 

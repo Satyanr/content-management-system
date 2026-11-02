@@ -12,7 +12,13 @@
             @endif
             aria-label="Window {{ $zone->name }}">
             <div class="h-full w-full overflow-hidden bg-slate-800/50">
-                @if ($asset && auth()->user()->can('media.view'))
+                @if ($interactive)
+                    <div wire:ignore class="h-full w-full overflow-hidden">
+                        <template x-if="editorItem({{ $zone->id }})?.type === 'image'"><img style="object-fit:{{ $zone->fit_mode === 'stretch' ? 'fill' : $zone->fit_mode }}" :src="editorItem({{ $zone->id }}).src" :alt="editorItem({{ $zone->id }}).title" :style="fitMedia({{ $zone->id }})" draggable="false" class="pointer-events-none h-full w-full"></template>
+                        <template x-if="editorItem({{ $zone->id }})?.type === 'video'"><video :src="editorItem({{ $zone->id }}).src" :style="fitMedia({{ $zone->id }})" muted playsinline preload="metadata" class="pointer-events-none h-full w-full"></video></template>
+                        <div x-show="!editorItem({{ $zone->id }})?.src" class="flex h-full items-center justify-center text-xs text-slate-300">{{ $zone->name }} · Tambahkan media</div>
+                    </div>
+                @elseif ($asset && auth()->user()->can('media.view'))
                     @if ($asset->type === 'image')
                         <img wire:key="{{ $interactive ? 'editor' : 'preview' }}-image-{{ $zone->items->first()->id }}" src="{{ $asset->url }}" alt="{{ $asset->title }}" draggable="false" class="pointer-events-none h-full w-full" :style="fitMedia({{ $zone->id }})" style="object-fit:{{ $zone->fit_mode === 'stretch' ? 'fill' : $zone->fit_mode }}" />
                     @elseif ($asset->type === 'video')
@@ -24,7 +30,7 @@
                 <div x-cloak x-show="selectedZoneId === {{ $zone->id }}" class="pointer-events-none absolute left-0 top-0 bg-cyan-500 px-1 text-black" :style="{ fontSize: 11 / scale + 'px', transform: 'translateY(-100%)' }">{{ $zone->name }}</div>
                 @can('playlists.edit')
                     @foreach (['nw'=>[0,0],'n'=>[50,0],'ne'=>[100,0],'e'=>[100,50],'se'=>[100,100],'s'=>[50,100],'sw'=>[0,100],'w'=>[0,50]] as $handle => [$left,$top])
-                        <button type="button" x-cloak x-show="selectedZoneId === {{ $zone->id }} && !zones[{{ $zone->id }}]?.is_locked" @pointerdown.stop="startWindow($event, {{ $zone->id }}, '{{ $handle }}')" :disabled="busy" class="absolute z-10 border border-slate-950 bg-cyan-300" :style="{ width: 10 / scale + 'px', height: 10 / scale + 'px', left: '{{ $left }}%', top: '{{ $top }}%', transform: 'translate(-50%, -50%)', cursor: '{{ $handle }}-resize' }" aria-label="Resize {{ $zone->name }} {{ $handle }}"></button>
+                        <button type="button" x-cloak x-show="selectedZoneId === {{ $zone->id }} && !zones[{{ $zone->id }}]?.is_locked" @pointerdown.stop="startWindow($event, {{ $zone->id }}, '{{ $handle }}')" :disabled="busy" class="absolute z-10 rounded-sm border border-slate-950 bg-cyan-300 shadow" :style="{ width: 12 / scale + 'px', height: 12 / scale + 'px', left: '{{ $left }}%', top: '{{ $top }}%', transform: 'translate(-50%, -50%)', cursor: '{{ $handle }}-resize' }" title="Ubah ukuran Window" aria-label="Resize {{ $zone->name }} {{ $handle }}"></button>
                     @endforeach
                 @endcan
             @endif

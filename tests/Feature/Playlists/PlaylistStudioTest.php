@@ -100,7 +100,7 @@ test('media results and pagination are strictly company scoped and permission ch
 
 test('view only user cannot mutate pages or canvas', function () {
     $this->user->revokePermissionTo('playlists.edit');
-    Livewire::test(PlaylistStudio::class, ['playlistId' => $this->playlist->id])->assertSee('View only')->call('addPage')->assertForbidden();
+    Livewire::test(PlaylistStudio::class, ['playlistId' => $this->playlist->id])->assertSee('Hanya lihat')->call('addPage')->assertForbidden();
     Livewire::test(PlaylistStudio::class, ['playlistId' => $this->playlist->id])->call('deletePage', $this->page->id)->assertForbidden();
     Livewire::test(PlaylistStudio::class, ['playlistId' => $this->playlist->id])->set('name', 'Forbidden')->call('save')->assertForbidden();
     expect($this->playlist->fresh()->name)->toBe('Lobby Promotion');

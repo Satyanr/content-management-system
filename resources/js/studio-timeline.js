@@ -23,7 +23,7 @@ export function studioTimeline() {
             this.loadingPlayback=false;
             if(!ok || version!==generation || !manifest)return false;
             this.releasePlayback();engine?.destroy();
-            engine=new PlaybackEngine(manifest,{onChange:snapshot=>this.updatePlayback(snapshot)});
+            this.metadata={};engine=new PlaybackEngine(manifest,{onChange:snapshot=>this.updatePlayback(snapshot)});
             engine.setLoop(this.loopPlaylist);this.playbackManifest=engine.manifest;this.playbackStale=false;engine.emit();this.ensureMetadata();
             const active=engine.manifest.pages.find(p=>p.id===this.pageId);if(active?.start)engine.seek(active.start);
             if(this.preview || this.playbackMode)this.$nextTick(()=>this.attachRenderer());
@@ -35,8 +35,21 @@ export function studioTimeline() {
         },
         ensureMetadata() {
             if(pool || !engine)return;
-            pool=new MetadataPool({onResult:(src,info)=>{if(!engine)return;engine.setMetadata(src,info);this.metadata={...engine.metadata};}});
+            const owner=engine;
+            pool=new MetadataPool({onResult:(src,info)=>{if(engine!==owner)return;owner.setMetadata(src,info);this.metadata={...owner.metadata};},onDiagnostic:info=>this.mediaDiagnostic(info)});
             pool.load(engine.manifest);
+            if(this.mediaDiagnosticsEnabled()) {
+                const sources=new Map(engine.manifest.pages.flatMap(p=>p.zones).flatMap(z=>z.items).filter(i=>i.type==='video' && i.src).map(i=>[i.src,i.id]));
+                for(const [src,mediaId] of sources) fetch(src,{method:'HEAD',credentials:'same-origin',redirect:'manual',signal:AbortSignal.timeout(8000)})
+                    .then(response=>this.mediaDiagnostic({event:'http',mediaId,status:response.status,mime:response.headers.get('Content-Type'),length:response.headers.get('Content-Length'),ranges:response.headers.get('Accept-Ranges')}))
+                    .catch(()=>this.mediaDiagnostic({event:'http-unavailable',mediaId}));
+            }
+        },
+        mediaDiagnosticsEnabled() {
+            try { return this.$el?.dataset.playbackDebug==='1' && globalThis.localStorage?.getItem('cms.playback.debug')==='1'; } catch { return false; }
+        },
+        mediaDiagnostic(info) {
+            if(this.mediaDiagnosticsEnabled())console.debug('[Studio media]',info);
         },
         updatePlayback(snapshot) {
             this.playback=snapshot;
@@ -47,7 +60,7 @@ export function studioTimeline() {
             if(!engine || (!this.preview && !this.playbackMode))return;
             const element=this.preview?this.$refs.previewPlayback:this.$refs.inlinePlayback;
             if(!element)return;
-            renderer=new PlaybackRenderer(element,{onError:src=>{engine?.setMetadata(src,{status:'error',message:'Media unavailable / Unsupported codec'});this.metadata={...engine?.metadata};},onBlocked:()=>{this.audioBlocked=true;},onSeeking:value=>{this.mediaSeeking=value;}});
+            renderer=new PlaybackRenderer(element,{onError:(src,info)=>{engine?.setMetadata(src,info ?? {status:'error',message:'Media unavailable / Unsupported codec'});this.metadata={...engine?.metadata};},onBlocked:()=>{this.audioBlocked=true;},onSeeking:value=>{this.mediaSeeking=value;},onDiagnostic:info=>this.mediaDiagnostic(info)});
             this.updatePlayback(engine.snapshot());
             if(this.preview && this.$refs.previewArea){
                 resizeObserver=new ResizeObserver(()=>this.fitPlaybackPreview());resizeObserver.observe(this.$refs.previewArea);this.fitPlaybackPreview();
@@ -63,11 +76,11 @@ export function studioTimeline() {
         async openPreview() {
             if(this.busy || this.gesture)return;
             if(!engine || this.playbackStale){if(!(await this.loadPlayback()))return;}
-            this.ensureMetadata();engine.pause();this.playbackMode=false;this.preview=true;this.timelineOpen=true;
+            this.ensureMetadata();engine.pause();this.editorTimelineOpen=this.timelineOpen;this.playbackMode=false;this.preview=true;this.timelineOpen=true;
             this.$nextTick(()=>{this.attachRenderer();this.$refs.closePreview.focus();});
         },
         closePreview() {
-            engine?.pause();this.preview=false;this.playbackMode=false;this.releasePlayback();
+            engine?.pause();this.timelineOpen=this.editorTimelineOpen ?? false;this.preview=false;this.playbackMode=false;this.releasePlayback();
             if(globalThis.document?.fullscreenElement===this.$refs.previewDialog)document.exitFullscreen?.().catch(()=>{});
             this.$refs.previewTrigger.focus();
         },
@@ -136,7 +149,7 @@ export function studioTimeline() {
         },
         durationLabel(item){
             if(!item.type && !positive(item.duration))return 'Unknown duration';
-            if(item.type==='video' && item.duration===null){const info=this.metadata[item.src];return info?.status==='error'?'Auto / Unknown':info?.duration||item.knownDuration?'Auto / '+(info?.duration||item.knownDuration).toFixed(2)+'s':'Auto / Loading metadata';}
+            if(item.type==='video' && item.duration===null){const info=this.metadata[item.src];return info?.status==='error'?'Auto / '+(info.message || 'Unknown'):info?.duration||item.knownDuration?'Auto / '+Number(info?.duration||item.knownDuration).toFixed(2)+'s':'Auto / Loading metadata';}
             return (item.duration??10)+'s';
         },
         timelinePointer(event) {

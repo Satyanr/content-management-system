@@ -5,12 +5,15 @@ use App\Models\Company;
 use App\Models\MediaAsset;
 use App\Models\Playlist;
 use App\Models\User;
+use App\Services\MediaTransform;
 use App\Services\PlaylistPlayback;
+use App\Services\PlaylistWindowEditor;
 use App\Services\WorkspaceService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -186,8 +189,72 @@ test('existing stream supports bounded open-ended suffix ranges and authorized i
         $this->withHeader('Range', $range)->get($url)->assertStatus(416);
     }
     $this->flushHeaders();
-    $this->get(route('admin.media-assets.stream',$this->image->id))->assertOk()->assertHeader('Content-Type','image/png');
-    $this->get(route('admin.media-assets.stream',$this->foreignAsset->id))->assertNotFound();
+    $this->get(route('admin.media-assets.stream', $this->image->id))->assertOk()->assertHeader('Content-Type', 'image/png');
+    $this->get(route('admin.media-assets.stream', $this->foreignAsset->id))->assertNotFound();
     $this->user->revokePermissionTo('media.view');
     $this->get($url)->assertForbidden();
+});
+
+test('private local video preserves real bytes and MIME and HEAD never streams the file', function () {
+    Storage::fake('local');
+    $bytes = "\x00\x00\x00\x18ftypmp42video-fixture-bytes";
+    Storage::disk('local')->put($this->video->path, $bytes);
+    $this->video->update(['disk' => 'local', 'mime_type' => 'video/mp4', 'duration' => null, 'metadata' => []]);
+    $url = route('admin.media-assets.stream', $this->video->id);
+    $full = $this->get($url)->assertOk()->assertHeader('Content-Type', 'video/mp4')->assertHeader('Content-Length', (string) strlen($bytes))->assertHeader('Accept-Ranges', 'bytes');
+    expect($full->streamedContent())->toBe($bytes);
+    $this->head($url)->assertOk()->assertContent('')->assertHeader('Content-Length', (string) strlen($bytes));
+    $partial = $this->withHeader('Range', 'bytes=4-11')->get($url)->assertStatus(206)->assertHeader('Content-Range', 'bytes 4-11/'.strlen($bytes))->assertHeader('Content-Length', '8');
+    expect($partial->streamedContent())->toBe(substr($bytes, 4, 8));
+    $item = app(PlaylistPlayback::class)->manifest($this->playlist->id)['pages'][0]['zones'][0]['items'][0];
+    expect($item['duration'])->toBeNull();
+    expect($item['knownDuration'])->toBeNull();
+    expect($item['src'])->toBe($url);
+    $this->flushHeaders();
+    $this->user->revokePermissionTo('media.view');
+    $this->head($url)->assertForbidden();
+});
+
+test('media transforms persist independently without changing either Window or canvas geometry', function () {
+    $this->imageItem->update(['settings' => ['editor_request_id' => 'preserve-request-id']]);
+    $geometry = $this->zone->fresh()->getAttributes();
+    $canvas = $this->playlist->fresh()->getAttributes();
+    $other = $this->videoItem->fresh()->getAttributes();
+    $data = ['scale' => 2.25, 'offset_x' => 20, 'offset_y' => -15, 'fit_mode' => 'cover', 'keep_aspect_ratio' => true];
+    playbackComponent($this)->call('updateMediaTransform', $this->page->id, $this->zone->id, $this->imageItem->id, $data)->assertHasNoErrors()->assertReturned(true);
+    expect($this->imageItem->fresh()->settings['media_transform'])->toBe($data);
+    expect($this->imageItem->fresh()->settings['editor_request_id'])->toBe('preserve-request-id');
+    expect($this->zone->fresh()->getAttributes())->toBe($geometry);
+    expect($this->playlist->fresh()->getAttributes())->toBe($canvas);
+    expect($this->videoItem->fresh()->getAttributes())->toBe($other);
+    $manifest = app(PlaylistPlayback::class)->manifest($this->playlist->id);
+    $items = $manifest['pages'][0]['zones'][0]['items'];
+    expect($items[1]['mediaTransform'])->toEqual($data);
+    expect($items[0]['mediaTransform']['scale'])->toBe(1);
+    expect(json_encode($manifest))->not->toContain('preserve-request-id');
+    playbackComponent($this)->assertSee('2.25', false);
+});
+
+test('transform validation rejects unexpected keys bounds and cross company or view only mutations', function () {
+    $defaults = MediaTransform::defaults();
+    foreach ([['scale' => 0], ['scale' => 6], ['offset_x' => 101], ['offset_y' => -101], ['fit_mode' => 'invalid'], ['path' => '/secret']] as $change) {
+        expect(fn () => app(PlaylistWindowEditor::class)->transform($this->playlist->id, $this->page->id, $this->zone->id, $this->imageItem->id, array_replace($defaults, $change)))->toThrow(ValidationException::class);
+    }
+    expect(fn () => app(PlaylistWindowEditor::class)->transform($this->playlist->id, $this->page->id, $this->zone->id, $this->foreignItem->id, $defaults))->toThrow(ModelNotFoundException::class);
+    $this->user->revokePermissionTo('playlists.edit');
+    playbackComponent($this)->call('updateMediaTransform', $this->page->id, $this->zone->id, $this->imageItem->id, $defaults)->assertForbidden();
+});
+
+test('create empty Window preserves other Windows and adding media remains a sequence', function () {
+    $original = $this->zone->fresh()->getAttributes();
+    $count = $this->page->zones()->count();
+    $component = playbackComponent($this)->call('createWindow', $this->page->id)->assertReturned(true);
+    $new = $this->page->zones()->reorder()->latest('id')->first();
+    expect($this->page->zones()->count())->toBe($count + 1);
+    expect($new->items()->count())->toBe(0);
+    $component->call('addWindowMedia', $this->page->id, $new->id, $this->image->id, (string) Str::uuid())->assertHasNoErrors()
+        ->call('addWindowMedia', $this->page->id, $new->id, $this->video->id, (string) Str::uuid())->assertHasNoErrors();
+    expect($new->items()->count())->toBe(2);
+    expect($this->page->zones()->count())->toBe($count + 1);
+    expect($this->zone->fresh()->getAttributes())->toBe($original);
 });

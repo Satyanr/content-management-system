@@ -2,28 +2,30 @@
 
 @section('content')
     <x-cms.page-header
-        title="Dashboard"
-        description="Overview of users, sessions, and recent system activities."
+        title="Beranda"
+        subtitle="Ringkasan workspace dan aktivitas terbaru."
     />
 
+    <x-cms.workflow-tip title="Siapkan tayangan pertama Anda" description="Mulai dari Pustaka Media → Playlist Studio → Jadwal → Perangkat. Panduan selalu tersedia dari tombol Bantuan." />
+    <div class="mb-6 flex flex-wrap gap-2">@foreach (['media.view'=>['admin.media-assets.index','1. Pustaka Media'],'playlists.view'=>['admin.playlists.index','2. Playlist'],'scheduler.view'=>['admin.scheduler.index','3. Jadwal'],'devices.view'=>['admin.devices.index','4. Perangkat']] as $permission=>[$route,$label])@can($permission)<a href="{{ route($route) }}" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:border-blue-300">{{ $label }}</a>@endcan @endforeach</div>
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <x-cms.card>
-            <div class="text-sm text-gray-500">Companies</div>
+            <div class="text-sm text-gray-500">Perusahaan</div>
             <div class="mt-2 text-3xl font-bold text-gray-900">
                 {{ $workspaceCompanyId ? 1 : $totalCompanies }}
             </div>
             <div class="mt-1 text-xs text-gray-500">
-                {{ $workspaceCompanyId ? 'Selected workspace' : 'All companies' }}
+                {{ $workspaceCompanyId ? 'Workspace terpilih' : 'Semua perusahaan' }}
             </div>
         </x-cms.card>
 
         <x-cms.card>
-            <div class="text-sm text-gray-500">Users</div>
+            <div class="text-sm text-gray-500">Pengguna</div>
             <div class="mt-2 text-3xl font-bold text-gray-900">
                 {{ $totalUsers }}
             </div>
             <div class="mt-1 text-xs text-gray-500">
-                Registered users
+                Pengguna terdaftar
             </div>
         </x-cms.card>
 
@@ -38,7 +40,7 @@
         </x-cms.card>
 
         <x-cms.card>
-            <div class="text-sm text-gray-500">Inactive</div>
+            <div class="text-sm text-gray-500">Nonaktif</div>
             <div class="mt-2 text-3xl font-bold text-yellow-600">
                 {{ $inactiveSessions }}
             </div>
@@ -63,7 +65,7 @@
             <div class="mb-4 flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">
-                        Latest Activities
+                        Aktivitas Terbaru
                     </h2>
                     <p class="text-sm text-gray-500">
                         Recent CRUD and system actions.
@@ -75,7 +77,7 @@
                         href="{{ route('admin.activity-logs.index') }}"
                         class="text-sm font-medium text-blue-600 hover:underline"
                     >
-                        View all
+                        Lihat semua
                     </a>
                 @endcan
             </div>
@@ -119,10 +121,10 @@
             <div class="mb-4 flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">
-                        Latest Login History
+                        Riwayat Login Terbaru
                     </h2>
                     <p class="text-sm text-gray-500">
-                        Recent user login sessions.
+                        Sesi pengguna terbaru.
                     </p>
                 </div>
 
@@ -131,7 +133,7 @@
                         href="{{ route('admin.login-histories.index') }}"
                         class="text-sm font-medium text-blue-600 hover:underline"
                     >
-                        View all
+                        Lihat semua
                     </a>
                 @endcan
             </div>
@@ -171,7 +173,7 @@
                                 </x-cms.badge>
                             @else
                                 <x-cms.badge color="yellow">
-                                    Inactive
+                                    Nonaktif
                                 </x-cms.badge>
                             @endif
                         </div>

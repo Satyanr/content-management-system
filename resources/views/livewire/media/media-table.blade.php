@@ -6,38 +6,38 @@
             <button type="button" wire:click="setTab('my_media')"
                 class="border-b-2 px-4 py-3 text-sm font-medium
                 {{ $activeTab === 'my_media' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
-                My Media
+                Media Saya
             </button>
 
             <button type="button" wire:click="setTab('upload')"
                 class="border-b-2 px-4 py-3 text-sm font-medium
                 {{ $activeTab === 'upload' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
-                Upload
+                Unggah
             </button>
 
             <button type="button" wire:click="setTab('shared')"
                 class="border-b-2 px-4 py-3 text-sm font-medium
                 {{ $activeTab === 'shared' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700' }}">
-                Shared with me
+                Dibagikan ke Saya
             </button>
         </div>
     </div>
 
     @if ($isAllCompanies)
         <div class="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-            You are viewing all companies. Select a workspace first before uploading new media.
+            Anda sedang melihat semua perusahaan. Pilih workspace untuk mengunggah media.
         </div>
     @endif
 
     @if ($activeTab === 'upload')
         <div class="mb-4 text-sm text-gray-500">
-            Upload location:
+            Lokasi unggah:
 
             <span class="font-medium text-gray-900">
                 @if ($currentFolder)
                     {{ $currentFolder->name }}
                 @else
-                    My Media
+                    Media Saya
                 @endif
             </span>
         </div>
@@ -207,13 +207,13 @@
                             if (this.xhr.status >= 200 && this.xhr.status < 300) {
                                 this.status = 'success';
                                 this.progress = 100;
-                                this.message = 'Upload successful';
+                                this.message = 'Unggah berhasil';
                 
                                 this.uploadItems = this.uploadItems.map((item) => {
                                     if (item.batchId === batchId) {
                                         item.progress = 100;
                                         item.status = 'success';
-                                        item.message = 'Upload successful';
+                                        item.message = 'Unggah berhasil';
                                     }
                 
                                     return item;
@@ -273,12 +273,12 @@
                         this.xhr.onabort = () => {
                             this.uploading = false;
                             this.status = 'cancelled';
-                            this.message = 'Upload cancelled.';
+                            this.message = 'Unggah dibatalkan.';
                 
                             this.uploadItems = this.uploadItems.map((item) => {
                                 if (item.batchId === batchId) {
                                     item.status = 'cancelled';
-                                    item.message = 'Upload cancelled';
+                                    item.message = 'Unggah dibatalkan';
                                 }
                 
                                 return item;
@@ -374,7 +374,7 @@
                                     </h2>
 
                                     <p class="mt-1 text-sm text-gray-500">
-                                        File will be uploaded automatically after selected.
+                                        File akan diunggah otomatis setelah dipilih.
                                     </p>
                                 </div>
 
@@ -382,7 +382,7 @@
                                     <button type="button" x-on:click="openFilePicker"
                                         class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                                         x-bind:disabled="uploading">
-                                        + Upload Media
+                                        + Unggah Media
                                     </button>
 
                                     <button type="button" x-on:click="resetUpload"
@@ -392,7 +392,7 @@
 
                                     <button type="button" x-on:click="goToMyMedia"
                                         class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">
-                                        View in My Media
+                                        View in Media Saya
                                     </button>
                                 </div>
                             </div>
@@ -444,7 +444,7 @@
                                                     </div>
 
                                                     <span class="text-sm font-medium text-gray-900">
-                                                        Upload successful
+                                                        Unggah berhasil
                                                     </span>
                                                 </div>
                                             </template>
@@ -456,14 +456,14 @@
 
                                             <template x-if="item.status === 'cancelled'">
                                                 <div class="w-full rounded-lg bg-gray-50 px-4 py-2 text-sm text-gray-700">
-                                                    Upload cancelled
+                                                    Unggah dibatalkan
                                                 </div>
                                             </template>
                                         </div>
 
                                         <button type="button" x-on:click="removeItem(item.id)"
                                             class="flex h-10 w-10 shrink-0 items-center justify-center text-4xl leading-none text-gray-500 hover:text-red-600"
-                                            title="Remove">
+                                            title="Keluarkan">
                                             ×
                                         </button>
                                     </div>
@@ -481,7 +481,7 @@
             <div class="flex items-center justify-between gap-4">
                 <div class="flex min-w-0 items-center gap-2 text-sm">
                     <button type="button" wire:click="goToRoot" class="font-medium text-blue-600 hover:text-blue-700">
-                        My Media
+                        Media Saya
                     </button>
 
                     @foreach ($breadcrumbs as $folder)
@@ -498,7 +498,7 @@
                     @if (!$isAllCompanies)
                         <button type="button" wire:click="openCreateFolderForm"
                             class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                            + New Folder
+                            + Folder Baru
                         </button>
                     @endif
                 @endcan
@@ -517,7 +517,7 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div class="flex-1">
                         <label class="mb-2 block text-sm font-medium text-gray-700">
-                            Folder Name
+                            Nama Folder
                         </label>
 
                         <input type="text" wire:model="newFolderName" wire:keydown.enter="createFolder"
@@ -535,12 +535,12 @@
                     <div class="flex gap-2">
                         <button type="button" wire:click="closeCreateFolderForm"
                             class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            Cancel
+                            Batal
                         </button>
 
                         <button type="button" wire:click="createFolder"
                             class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                            Create Folder
+                            Buat Folder
                         </button>
                     </div>
                 </div>
@@ -549,7 +549,7 @@
 
         <div class="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div class="flex flex-col gap-3 md:flex-row">
-                <input type="text" wire:model.live.debounce.500ms="search" placeholder="Search in library..."
+                <input type="text" wire:model.live.debounce.500ms="search" placeholder="Cari media..."
                     class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 md:w-80">
 
                 <select wire:model.live="type"
@@ -638,9 +638,9 @@
 
                                         @can('media.delete')
                                             <button type="button" wire:click="deleteFolder({{ $folder->id }})"
-                                                wire:confirm="Delete this folder?" x-on:click="open = false"
+                                                wire:confirm="Hapus folder ini?" x-on:click="open = false"
                                                 class="block w-full border-t border-gray-100 px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50">
-                                                Delete
+                                                Hapus
                                             </button>
                                         @endcan
                                     </div>
@@ -815,7 +815,7 @@
                                             wire:confirm="Are you sure you want to delete this media?"
                                             x-on:click="open = false"
                                             class="block w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50">
-                                            Delete
+                                            Hapus
                                         </button>
                                     @endcan
                                 </div>
@@ -839,7 +839,7 @@
                 </div>
             @empty
                 <div class="col-span-full rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-                    No media found.
+                    Belum ada media. Pilih Unggah untuk menambahkan gambar atau video.
                 </div>
             @endforelse
         </div>
@@ -862,7 +862,7 @@
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">
-                            Rename Folder
+                            Ubah Nama Folder
                         </h2>
 
                         <p class="mt-1 text-sm text-gray-500">
@@ -878,7 +878,7 @@
 
                 <div class="p-6">
                     <label class="mb-2 block text-sm font-medium text-gray-700">
-                        Folder Name
+                        Nama Folder
                     </label>
 
                     <input type="text" wire:model="renameFolderName" wire:keydown.enter="renameFolder"
@@ -894,14 +894,14 @@
                 <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
                     <button type="button" wire:click="closeRenameFolderModal"
                         class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Cancel
+                        Batal
                     </button>
 
                     <button type="button" wire:click="renameFolder" wire:loading.attr="disabled"
                         wire:target="renameFolder"
                         class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
                         <span wire:loading.remove wire:target="renameFolder">
-                            Save
+                            Simpan
                         </span>
 
                         <span wire:loading wire:target="renameFolder">
@@ -952,14 +952,14 @@
                 <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
                     <button type="button" wire:click="closeRenameMediaModal"
                         class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Cancel
+                        Batal
                     </button>
 
                     <button type="button" wire:click="renameMedia" wire:loading.attr="disabled"
                         wire:target="renameMedia"
                         class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
                         <span wire:loading.remove wire:target="renameMedia">
-                            Save
+                            Simpan
                         </span>
 
                         <span wire:loading wire:target="renameMedia">
@@ -1002,7 +1002,7 @@
                     <select wire:model="moveTargetFolderId"
                         class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                         <option value="">
-                            My Media / Root
+                            Media Saya / Root
                         </option>
 
                         @foreach ($moveFolders as $folder)
@@ -1027,7 +1027,7 @@
                 <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
                     <button type="button" wire:click="closeMoveMediaModal"
                         class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        Cancel
+                        Batal
                     </button>
 
                     <button type="button" wire:click="moveSelectedMedia" wire:loading.attr="disabled"

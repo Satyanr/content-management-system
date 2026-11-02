@@ -45,7 +45,7 @@
                                     <a href="{{ $getHref($child->route) }}"
                                         class="flex items-center p-2 pl-4 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white
                                        {{ $isActive($child->route) ? 'bg-gray-700 text-white' : '' }}">
-                                        <span>{{ $child->title }}</span>
+                                        <span>{{ ['Dashboard'=>'Beranda','Content Library'=>'Pustaka Media','Scheduler'=>'Jadwal','Devices'=>'Perangkat'][$child->title] ?? $child->title }}</span>
                                     </a>
                                 </li>
                             @endforeach
@@ -56,7 +56,7 @@
                         <a href="{{ $getHref($menu->route) }}"
                             class="flex items-center p-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white
                            {{ $isActive($menu->route) ? 'bg-gray-700 text-white' : '' }}">
-                            <span>{{ $menu->title }}</span>
+                            <span>{{ ['Dashboard'=>'Beranda','Content Library'=>'Pustaka Media','Scheduler'=>'Jadwal','Devices'=>'Perangkat'][$menu->title] ?? $menu->title }}</span>
                         </a>
                     </li>
                 @endif

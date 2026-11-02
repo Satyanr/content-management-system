@@ -9,6 +9,7 @@
 </head>
 <body class="bg-slate-950 font-sans antialiased">
     @livewire('playlists.playlist-studio', ['playlistId' => $playlist->id])
+    <x-cms.welcome-guide />
     @livewireScripts
 </body>
 </html>

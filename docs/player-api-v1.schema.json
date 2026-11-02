@@ -28,6 +28,17 @@
     "pollIntervalSeconds": {"type": "integer", "minimum": 1}
   },
   "$defs": {
+    "mediaTransform": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scale", "offset_x", "offset_y", "fit_mode", "keep_aspect_ratio"],
+      "properties": {
+        "scale": {"type": "number", "minimum": 1, "maximum": 5},
+        "offset_x": {"type": "number", "minimum": -100, "maximum": 100},
+        "offset_y": {"type": "number", "minimum": -100, "maximum": 100},
+        "fit_mode": {"enum": ["contain", "cover", "stretch"]},
+        "keep_aspect_ratio": {"type": "boolean"}
+      }
+    },
     "time": {"type": "string", "format": "date-time"},
     "schedule": {
       "type": "object", "required": ["id", "playlistId", "name", "priority", "type", "timezone", "startsAtUtc", "endsAtUtc", "startDate", "endDate", "startTime", "endTime", "weekdays"],
@@ -52,6 +63,7 @@
     "item": {
       "type": "object", "required": ["id", "sort_order", "mediaId", "title", "type", "duration", "durationMode", "knownDuration", "available"],
       "properties": {
+        "mediaTransform": {"$ref": "#/$defs/mediaTransform"},
         "id": {"type": "integer"}, "sort_order": {"type": "integer"}, "mediaId": {"type": ["integer", "null"]}, "title": {"type": "string"}, "type": {"enum": ["image", "video", null]}, "duration": {"type": ["integer", "null"], "minimum": 1}, "durationMode": {"enum": ["auto", "manual"]}, "knownDuration": {"type": ["number", "null"], "exclusiveMinimum": 0}, "available": {"type": "boolean"}
       }
     },

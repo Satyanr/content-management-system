@@ -146,7 +146,7 @@ test('playlist route renders sidebar and rejects missing permission', function (
     Permission::firstOrCreate(['name' => 'dashboard.view', 'guard_name' => 'web']);
     $user->givePermissionTo('dashboard.view');
     $this->seed(MenuSeeder::class);
-    $this->actingAs($user)->get('/admin/playlists')->assertOk()->assertSee('Search playlists...')->assertSee('/admin/playlists');
+    $this->actingAs($user)->get('/admin/playlists')->assertOk()->assertSee('Cari Playlist...')->assertSee('/admin/playlists');
     $user->revokePermissionTo('playlists.view');
     $this->get('/admin/playlists')->assertForbidden();
 });

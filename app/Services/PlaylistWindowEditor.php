@@ -11,6 +11,31 @@ use Illuminate\Validation\ValidationException;
 
 class PlaylistWindowEditor
 {
+    public function create(int $playlistId, int $pageId): PlaylistZone
+    {
+        return DB::transaction(function () use ($playlistId, $pageId) {
+            [$playlist, $page] = $this->page($playlistId, $pageId);
+
+            return $page->zones()->create(['name' => 'Window '.($page->zones()->count() + 1), 'x' => 0, 'y' => 0,
+                'width' => max(1, (int) floor($playlist->canvas_width / 2)), 'height' => max(1, (int) floor($playlist->canvas_height / 2)),
+                'z_index' => (int) $page->zones()->max('z_index') + 1, 'fit_mode' => 'contain', 'keep_aspect_ratio' => true]);
+        });
+    }
+
+    public function transform(int $playlistId, int $pageId, int $zoneId, int $itemId, array $input): void
+    {
+        DB::transaction(function () use ($playlistId, $pageId, $zoneId, $itemId, $input) {
+            [$playlist, $page] = $this->page($playlistId, $pageId);
+            $item = $page->zones()->findOrFail($zoneId)->items()->findOrFail($itemId);
+            $this->media($playlist, $item->media_asset_id);
+            $settings = $item->settings ?? [];
+            $valid = MediaTransform::validate($input);
+            $valid['keep_aspect_ratio'] = (bool) $valid['keep_aspect_ratio'];
+            $settings['media_transform'] = MediaTransform::read(['media_transform' => $valid]);
+            $item->update(['settings' => $settings]);
+        });
+    }
+
     private function page(int $playlistId, int $pageId): array
     {
         Gate::authorize('playlists.edit');

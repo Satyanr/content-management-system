@@ -38,6 +38,7 @@ test('real Windows safeStorage pairing, image playback, restart persistence and 
     const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=', 'base64');
     const imageHash = createHash('sha256').update(image).digest('hex');
     const data = manifest(); data.media[0].size = image.length; data.media[0].checksum.value = imageHash;
+    data.playlists[0].pages[0].zones[0].items[0].mediaTransform = {scale:2,offset_x:20,offset_y:-10,fit_mode:'cover',keep_aspect_ratio:true};
     let revoked = false, heartbeat = 0;
     const server = createServer((request, response) => {
         if (request.url === '/api/device/activate') { response.writeHead(201, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ device: { public_id: publicId }, credential: token })); return; }
@@ -60,6 +61,7 @@ test('real Windows safeStorage pairing, image playback, restart persistence and 
         await page.locator('#origin').fill('http://127.0.0.1:' + server.address().port); await page.locator('#code').fill('A'.repeat(20)); await page.locator('#activate').click();
         await expect(page.locator('#setup')).toBeHidden();
         await expect.poll(() => page.evaluate(() => document.querySelector('#canvas img')?.naturalWidth ?? 0)).toBe(1);
+        expect(await page.locator('#canvas img').evaluate(el=>el.style.transform)).toBe('translate(20%, -10%) scale(2)');
         expect((await readFile(path.join(directory, 'credentials.bin'))).includes(Buffer.from(token))).toBe(false);
         expect(await page.evaluate(async () => JSON.stringify((await window.player.status()).value).includes('dvc_'))).toBe(false);
         await expect.poll(() => heartbeat).toBeGreaterThan(0);

@@ -31,6 +31,7 @@
     </main>
 
     @include('components.admin.footer')
+    <x-cms.welcome-guide />
 
     @livewireScripts
 </body>

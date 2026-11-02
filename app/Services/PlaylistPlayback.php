@@ -19,7 +19,7 @@ class PlaylistPlayback
 
         $playlist->setRelation('pages', $pages);
 
-        return app(PlaylistLayout::class)->serialize($playlist, function ($item) use ($canMedia) {
+        return app(PlaylistLayout::class)->serialize($playlist, function ($item, $zone) use ($canMedia) {
             $asset = $canMedia ? $item->mediaAsset : null;
             $supported = $asset && in_array($asset->type, ['image', 'video'], true);
             $known = $asset?->duration ?: ($asset?->metadata['duration'] ?? null);
@@ -27,6 +27,7 @@ class PlaylistPlayback
 
             return [
                 'id' => $item->id, 'sort_order' => $item->sort_order,
+                'mediaTransform' => MediaTransform::read($item->settings, $zone->fit_mode),
                 'title' => $supported ? $asset->title : 'Media unavailable',
                 'type' => $supported ? $asset->type : null,
                 'src' => $supported ? route('admin.media-assets.stream', $asset->id) : null,

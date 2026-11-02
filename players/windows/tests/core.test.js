@@ -15,6 +15,8 @@ import { PlayerRuntime } from '../src/main/runtime.js';
 import { mediaHash, mediaResponse } from '../src/main/protocol.js';
 import { adaptPlaylist, segmentAt, playbackKey } from '../src/playback/adapter.js';
 import { PlaybackEngine } from '../src/playback/vendor/studio-playback.js';
+import { mediaTransformStyle } from '../src/playback/vendor/studio-geometry.js';
+import { mediaTransformStyle as studioMediaStyle } from '../../../resources/js/studio-geometry.js';
 import { PlayerMetadataQueue } from '../src/playback/metadata.js';
 import { manifest, bytes, hash, publicId, token } from './fixtures.js';
 
@@ -227,4 +229,14 @@ test('rotating logger accepts only sanitized codes and never stores supplied sec
     logger.log(token); logger.log('https://cms.test/?secret=code'); logger.log('invalid_token'); await logger.queue;
     const saved = await readFile(path.join(root, 'logs', 'player.log'), 'utf8');
     assert.equal(saved.includes(token), false); assert.equal(saved.includes('secret='), false); assert.ok(saved.includes('invalid_token'));
+});
+
+test('optional media transform is identical in Player and Studio while legacy layouts remain supported',()=>{
+    const m=manifest(),item=m.playlists[0].pages[0].zones[0].items[0];
+    const legacy=adaptPlaylist(m.playlists[0],m.media);assert.equal(legacy.pages[0].zones[0].items[0].mediaTransform,undefined);
+    item.mediaTransform={scale:2.5,offset_x:20,offset_y:-10,fit_mode:'cover',keep_aspect_ratio:true};
+    validateManifest(m,publicId);
+    const mapped=adaptPlaylist(m.playlists[0],m.media).pages[0].zones[0].items[0];assert.deepEqual(mapped.mediaTransform,item.mediaTransform);
+    assert.deepEqual(mediaTransformStyle(mapped.mediaTransform),studioMediaStyle(item.mediaTransform));
+    item.mediaTransform.scale=6;assert.throws(()=>validateManifest(m,publicId));
 });

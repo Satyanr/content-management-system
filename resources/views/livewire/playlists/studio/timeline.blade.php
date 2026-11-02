@@ -4,12 +4,12 @@
         @include('livewire.playlists.studio.playback-controls')
         <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400">
             <button type="button" @click="timelineOpen = !timelineOpen" :aria-expanded="timelineOpen" class="text-cyan-300">Timeline <span x-text="timelineOpen ? 'Hide' : 'Show'"></span></button>
-            <button type="button" @click="tracksOpen = !tracksOpen" :aria-expanded="tracksOpen" class="text-cyan-300">Window tracks</button>
+            <button type="button" @click="tracksOpen = !tracksOpen" :aria-expanded="tracksOpen" class="text-cyan-300">Urutan tiap Window</button>
             <label>Zoom <input type="range" min="8" max="100" step="2" x-model.number="timelineZoom" aria-label="Timeline zoom" class="w-24 align-middle"></label>
-            @if (!$inPreview)<label>Height <input type="range" min="140" max="360" step="10" x-model.number="timelineHeight" aria-label="Timeline height" class="w-20 align-middle"></label>@endif
-            <button type="button" @click="loadPlayback()" :disabled="busy || loadingPlayback" class="text-cyan-300 disabled:opacity-40">Refresh saved timeline</button>
-            <span x-cloak x-show="playbackStale" class="text-amber-300">Saved data changed</span>
-            <button type="button" x-cloak x-show="playbackMode && !preview" @click="stopPlayback()" class="text-cyan-300">Return to editor</button>
+            @if (!$inPreview)<label>Tinggi <input type="range" min="140" max="360" step="10" x-model.number="timelineHeight" aria-label="Timeline height" class="w-20 align-middle"></label>@endif
+            <button type="button" @click="loadPlayback()" :disabled="busy || loadingPlayback" class="text-cyan-300 disabled:opacity-40">Muat ulang timeline tersimpan</button>
+            <span x-cloak x-show="playbackStale" class="text-amber-300">Data tersimpan berubah</span>
+            <button type="button" x-cloak x-show="playbackMode && !preview" @click="stopPlayback()" class="text-cyan-300">Kembali ke editor</button>
         </div>
         <div x-cloak x-show="audioBlocked" class="flex flex-wrap items-center gap-2 text-xs text-amber-300" role="alert">Browser blocked playback/audio.
             <button type="button" @click="muted = true; updateAudio(); playPlayback()" class="studio-button">Play muted</button>

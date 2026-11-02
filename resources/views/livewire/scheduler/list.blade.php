@@ -1,5 +1,5 @@
 <x-cms.table>
-    <x-slot name="head"><tr>@foreach(['Schedule / Playlist','Type / Days / Date range','Start / End','Timezone','Priority','Status','Actions'] as $label)<x-cms.table-header>{{ $label }}</x-cms.table-header>@endforeach</tr></x-slot>
+    <x-slot name="head"><tr>@foreach(['Schedule / Playlist','Type / Days / Rentang tanggal','Start / End','Zona waktu','Prioritas','Status','Tindakan'] as $label)<x-cms.table-header>{{ $label }}</x-cms.table-header>@endforeach</tr></x-slot>
     @forelse($schedules as $s)
         <x-cms.table-row wire:key="schedule-{{ $s->id }}">
             <x-cms.table-cell><button type="button" wire:click="showDetails({{ $s->id }})" class="font-semibold text-blue-700 hover:underline">{{ $s->name }}</button><p class="mt-1 text-xs text-gray-500">{{ $s->playlist->name }}{{ $s->playlist->is_active ? '' : ' (Playlist inactive)' }}</p></x-cms.table-cell>
@@ -12,5 +12,5 @@
                 @can('scheduler.delete')<button type="button" wire:click="delete({{ $s->id }})" wire:confirm="Delete this Schedule? The Playlist will be kept." wire:loading.attr="disabled" class="text-red-600">Delete</button>@endcan
             </div></x-cms.table-cell>
         </x-cms.table-row>
-    @empty <x-cms.empty-state colspan="7" message="No schedules match these filters." />@endforelse
+    @empty <x-cms.empty-state colspan="7" message="Tidak ada jadwal yang cocok. Ubah filter atau buat jadwal baru." />@endforelse
 </x-cms.table>

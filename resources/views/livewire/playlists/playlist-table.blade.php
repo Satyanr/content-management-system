@@ -3,21 +3,21 @@
 
     @if (! $hasWorkspace)
         <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Select a company workspace from the top bar before managing Playlists.
-            Playlist data is intentionally hidden in All Companies mode.
+            Pilih workspace perusahaan pada bilah atas untuk mengelola Playlist.
+            Daftar Playlist tampil setelah workspace dipilih.
         </div>
     @endif
 
     <div class="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <input type="search" wire:model.live.debounce.350ms="search"
-            placeholder="Search playlists..."
+            placeholder="Cari Playlist..."
             class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:w-80" />
 
         @can('playlists.create')
             @if ($hasWorkspace)
                 <button type="button" wire:click="openCreate"
                     class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700">
-                    + New Playlist
+                    + Playlist Baru
                 </button>
             @endif
         @endcan
@@ -38,7 +38,7 @@
                         <div class="min-w-0">
                             <h3 class="truncate font-semibold text-gray-900">{{ $playlist->name }}</h3>
                             <p class="mt-1 line-clamp-2 text-xs text-gray-500">
-                                {{ $playlist->description ?: 'No description' }}
+                                {{ $playlist->description ?: 'Tanpa deskripsi' }}
                             </p>
                         </div>
                         <span class="rounded px-2 py-1 text-xs font-semibold {{ $playlist->is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600' }}">
@@ -62,7 +62,7 @@
                                 <button type="button" wire:click="delete({{ $playlist->id }})"
                                     wire:confirm="Delete this playlist and all its pages and zones?"
                                     class="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
-                                    Delete
+                                    Hapus
                                 </button>
                             @endcan
                         </div>
@@ -72,7 +72,7 @@
             </div>
         @empty
             <div class="col-span-full rounded-xl border border-gray-200 bg-white p-10 text-center text-gray-500">
-                {{ $hasWorkspace ? 'No playlists found. Create your first program.' : 'No workspace selected.' }}
+                {{ $hasWorkspace ? 'Belum ada Playlist. Klik Playlist Baru untuk membuat tayangan pertama.' : 'Pilih workspace perusahaan terlebih dahulu.' }}
             </div>
         @endforelse
     </div>
@@ -86,9 +86,9 @@
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">
-                            {{ $playlistId ? 'Edit Playlist' : 'Create Playlist' }}
+                            {{ $playlistId ? 'Ubah Playlist' : 'Buat Playlist' }}
                         </h2>
-                        <p class="text-sm text-gray-500">Name, canvas resolution and background.</p>
+                        <p class="text-sm text-gray-500">Nama, resolusi kanvas, dan warna latar.</p>
                     </div>
                     <button type="button" wire:click="closeModal" class="text-2xl text-gray-500 hover:text-gray-900">×</button>
                 </div>
@@ -96,22 +96,22 @@
                 <form wire:submit="save">
                     <div class="space-y-4 px-6 py-5">
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Name</label>
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Nama</label>
                             <input type="text" wire:model="name" maxlength="150" required
                                 class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="Example: Lobby Promotion" />
+                                placeholder="Contoh: Promosi Lobi" />
                             @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Description</label>
+                            <label class="mb-1 block text-sm font-medium text-gray-700">Deskripsi</label>
                             <textarea wire:model="description" rows="2"
                                 class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="Optional"></textarea>
+                                placeholder="Opsional"></textarea>
                             @error('description') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
 
                         <div>
-                            <label class="mb-2 block text-sm font-semibold text-gray-700">Canvas Presets</label>
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Preset Kanvas</label>
                             <div class="flex flex-wrap gap-2">
                                 @foreach ([[1920,1080,'FHD 16:9'],[1080,1920,'Portrait'],[1920,384,'LED Banner'],[4864,512,'Ultra Wide']] as $preset)
                                     <button type="button" wire:click="setCanvasPreset({{ $preset[0] }}, {{ $preset[1] }})"
@@ -136,22 +136,22 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
-                            <label class="text-sm font-medium text-gray-700">Background color</label>
+                            <label class="text-sm font-medium text-gray-700">Warna latar</label>
                             <input type="color" wire:model="backgroundColor" class="h-9 w-12 cursor-pointer rounded border border-gray-300" />
                             <span class="text-xs text-gray-500">{{ $backgroundColor }}</span>
                             @error('backgroundColor') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                             <input type="checkbox" wire:model="isActive" class="rounded border-gray-300 text-blue-600" />
-                            Active Playlist
+                            Playlist aktif
                         </label>
                     </div>
                     <div class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
                         <button type="button" wire:click="closeModal"
-                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">Cancel</button>
+                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50">Batal</button>
                         <button type="submit" wire:loading.attr="disabled" wire:target="save"
                             class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-                            <span wire:loading.remove wire:target="save">Save</span>
+                            <span wire:loading.remove wire:target="save">Simpan</span>
                             <span wire:loading wire:target="save">Saving...</span>
                         </button>
                     </div>

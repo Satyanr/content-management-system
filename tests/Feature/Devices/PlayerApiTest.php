@@ -284,6 +284,14 @@ test('shadowed schedule edits change revision without changing current winner', 
     expect($second->json('revision'))->not->toBe($first->json('revision'));
 });
 
+test('optional per item transforms change revision and do not expose arbitrary JSON settings', function () {
+    $before = $this->getJson('/api/device/manifest')->assertOk()->json('revision');
+    $this->item->update(['settings' => ['editor_request_id' => 'private-editor-key', 'media_transform' => ['scale' => 2, 'offset_x' => 15, 'offset_y' => -5, 'fit_mode' => 'cover', 'keep_aspect_ratio' => true]]]);
+    $response = $this->getJson('/api/device/manifest')->assertOk()->assertJsonPath('playlists.0.pages.0.zones.0.items.0.mediaTransform.scale', 2);
+    expect($response->json('revision'))->not->toBe($before);
+    expect($response->getContent())->not->toContain('private-editor-key');
+});
+
 test('manifest horizon is bounded and has contiguous explicit gaps', function () {
     config(['player.horizon_hours' => 999]);
     $response = $this->getJson('/api/device/manifest')->assertOk();

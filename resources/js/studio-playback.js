@@ -24,24 +24,22 @@ export function pageAt(manifest, time) {
 export function windowAt(zone, time, metadata = {}) {
     if (!zone.visible || !zone.items.length) return {zone,state:'empty',item:null};
     const pending=zone.items.filter(i=>i.type==='video' && i.available && itemDuration(i,metadata)===null && metadata[i.src]?.status!=='error');
-    if (pending.length) return {zone,state:'loading',item:null};
     const sequence=zone.items.map(item=>({item,duration:itemDuration(item,metadata)})).filter(x=>x.duration!==null);
     const total=sequence.reduce((n,x)=>n+x.duration,0);
-    if (!total) return {zone,state:'error',item:null};
+    if (!total) return {zone,state:pending.length?'loading':'error',item:null,message:zone.items.map(i=>metadata[i.src]?.message).find(Boolean) || 'Media unavailable / Unknown duration'};
     const cycle=Math.floor(Math.max(0,time)/total);
     let position=((time%total)+total)%total;
     for (const entry of sequence) {
-        if (position<entry.duration) return {zone,state:entry.item.available && metadata[entry.item.src]?.status!=='error'?'ready':'error',...entry,localTime:position,cycle};
+        if (position<entry.duration) return {zone,state:entry.item.available && metadata[entry.item.src]?.status!=='error'?'ready':'error',...entry,message:metadata[entry.item.src]?.message,localTime:position,cycle};
         position-=entry.duration;
     }
     return {zone,state:'empty',item:null};
 }
 export function trackSegments(zone, page, metadata, from, to, limit=600) {
     const pending=zone.items.some(i=>i.type==='video' && i.available && itemDuration(i,metadata)===null && metadata[i.src]?.status!=='error');
-    if (pending) return {pending:true,segments:[]};
     const sequence=zone.items.map(item=>({item,duration:itemDuration(item,metadata)})).filter(x=>x.duration!==null);
     const cycle=sequence.reduce((n,x)=>n+x.duration,0), segments=[];
-    if (!cycle) return {pending:false,segments};
+    if (!cycle) return {pending,segments};
     let at=Math.max(0,Math.floor(Math.max(0,from-page.start)/cycle))*cycle;
     const end=Math.min(Number(page.duration),to-page.start);
     while (at<end && segments.length<limit) {
@@ -52,7 +50,7 @@ export function trackSegments(zone, page, metadata, from, to, limit=600) {
             if (at>=end || segments.length>=limit) break;
         }
     }
-    return {pending:false,segments};
+    return {pending,segments};
 }
 export class PlaybackEngine {
     constructor(manifest,{now=()=>performance.now(),raf=fn=>requestAnimationFrame(fn),cancel=id=>cancelAnimationFrame(id),onChange=()=>{}}={}) {

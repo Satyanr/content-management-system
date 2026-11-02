@@ -38,13 +38,14 @@ class DeviceManifestService
         $assets = $playlists->flatMap(fn ($p) => $p->pages->flatMap(fn ($page) => $page->zones->flatMap(fn ($zone) => $zone->items->pluck('mediaAsset'))))
             ->filter()->unique('id')->sortBy('id')->values();
         $media = $assets->map(fn ($asset) => app(DeviceMediaFile::class)->metadata($asset))->keyBy('id');
-        $layouts = $playlists->map(fn ($playlist) => app(PlaylistLayout::class)->serialize($playlist, function ($item) use ($media) {
+        $layouts = $playlists->map(fn ($playlist) => app(PlaylistLayout::class)->serialize($playlist, function ($item, $zone) use ($media) {
             $asset = $item->mediaAsset;
             $file = $asset ? $media->get($asset->id) : null;
             $known = $asset?->duration ?: ($asset?->metadata['duration'] ?? null);
             $known = is_numeric($known) && is_finite((float) $known) && $known > 0 ? (float) $known : null;
 
             return ['id' => $item->id, 'sort_order' => $item->sort_order, 'mediaId' => $asset?->id,
+                'mediaTransform' => MediaTransform::read($item->settings, $zone->fit_mode),
                 'title' => $asset?->title ?? 'Media unavailable', 'type' => $asset?->type,
                 'duration' => $item->duration_seconds ?? ($asset?->type === 'image' ? 10 : null),
                 'durationMode' => $asset?->type === 'video' && $item->duration_seconds === null ? 'auto' : 'manual',

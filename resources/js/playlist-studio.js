@@ -1,5 +1,6 @@
 import { studioTimeline } from './studio-timeline.js';
 import { studioInteractions } from './studio-interactions.js';
+import { studioUi } from './studio-ui.js';
 // Zoom is editor state only; canvas and zone data remain in output pixels.
 export function clampZoom(value) {
     return Math.min(2, Math.max(0.25, Number(value) || 0.25));
@@ -16,6 +17,7 @@ export function playlistStudio() {
     return {
         ...studioInteractions(),
         ...studioTimeline(),
+        ...studioUi(),
         width: 1920, height: 1080, scale: 0.35, fitMode: true,
         leftWidth: 220, rightWidth: 300, showPages: true, showProperties: true,
         tab: 'library', preview: false, previewScale: 0.35, settings: false, dirty: false,
@@ -23,6 +25,7 @@ export function playlistStudio() {
             this.width = Number(this.$el.dataset.width);
             this.height = Number(this.$el.dataset.height);
             this.initializeInteractions();
+            this.initializeStudioUi();
             this.initializePlayback();
             observer = new ResizeObserver(() => { if (this.fitMode && !this.gesture) this.fit(); this.fitPreview(); });
             observer.observe(this.$refs.viewport);
@@ -57,13 +60,13 @@ export function playlistStudio() {
         },
         async selectPage(id) {
             if (this.busy || this.gesture) return;
-            if ((this.dirty || this.zoneDirty) && !window.confirm('Switch page? Unsaved page/Window properties will be discarded.')) return;
+            if ((this.dirty || this.zoneDirty || this.mediaDirty) && !window.confirm('Ganti Page? Perubahan yang belum disimpan akan dibuang.')) return;
             const ok=await this.perform(async () => { await this.$wire.selectPage(id); return true; }, { refreshForm: false });
             if(ok)this.editPagePlayback(id);return ok;
         },
         async addPage() {
             if (this.busy || this.gesture) return;
-            if ((this.dirty || this.zoneDirty) && !window.confirm('Add page? Unsaved page/Window properties will be discarded.')) return;
+            if ((this.dirty || this.zoneDirty || this.mediaDirty) && !window.confirm('Tambah Page? Perubahan yang belum disimpan akan dibuang.')) return;
             return this.perform(async () => { await this.$wire.addPage(); return true; }, { refreshForm: false });
         },
     };

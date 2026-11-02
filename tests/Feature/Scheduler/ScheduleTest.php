@@ -145,7 +145,7 @@ test('CRUD, enable disable and type changes preserve Playlist data', function ()
 
 test('conflicts show priority winner and require the UI save-anyway action', function () {
     $existing = weeklySchedule($this, ['priority' => 9, 'start_time' => '12:00:00', 'end_time' => '14:00:00']);
-    $component = Livewire::test(ScheduleTable::class)->call('openCreate')->set('form', schedulerForm($this))->call('save')->assertReturned(false)->assertSee('Schedule conflicts detected')->assertSee('The competing Schedule wins this pair.');
+    $component = Livewire::test(ScheduleTable::class)->call('openCreate')->set('form', schedulerForm($this))->call('save')->assertReturned(false)->assertSee('Ada jadwal yang bertumpuk')->assertSee('Jadwal lain didahulukan.');
     $this->assertDatabaseCount('schedules', 1);
     $component->call('save', true)->assertHasNoErrors()->assertReturned(true);
     $this->assertDatabaseCount('schedules', 2);
@@ -197,7 +197,7 @@ test('tenant data and forged Schedule and Playlist IDs cannot cross company boun
 
 test('All Companies and workspace switching reject create and existing forms', function () {
     $this->user->assignRole(Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']));
-    Livewire::test(ScheduleTable::class)->assertSee('Select a company workspace')->call('openCreate')->assertForbidden();
+    Livewire::test(ScheduleTable::class)->assertSee('Pilih workspace perusahaan')->call('openCreate')->assertForbidden();
     session()->put(WorkspaceService::SESSION_KEY, $this->company->id);
     $component = Livewire::test(ScheduleTable::class)->call('openCreate')->set('form', schedulerForm($this));
     session()->put(WorkspaceService::SESSION_KEY, $this->other->id);
@@ -244,8 +244,8 @@ test('conditional validation rejects invalid intervals weekdays timezone and dat
 test('list weekly views filters navigation and time lookup render actual data', function () {
     onceSchedule($this, ['name' => 'Morning Lobby']);
     $this->seed(MenuSeeder::class);
-    $this->get('/admin/scheduler')->assertOk()->assertSee('Upcoming 7 Days')->assertSee(route('admin.scheduler.index'));
-    $component = Livewire::test(ScheduleTable::class)->assertSee('Morning Lobby')->set('view', 'weekly')->assertSee('Scheduler - Weekly View')->assertSee('Lobby A')
+    $this->get('/admin/scheduler')->assertOk()->assertSee('Tayangan 7 Hari Mendatang')->assertSee(route('admin.scheduler.index'));
+    $component = Livewire::test(ScheduleTable::class)->assertSee('Morning Lobby')->set('view', 'weekly')->assertSee('Jadwal Mingguan')->assertSee('Lobby A')
         ->call('shiftWeek', 1)->assertSet('weekStart', '2026-11-09')->call('currentWeek')->assertSet('weekStart', '2026-11-02')
         ->set('probeTime', '2026-11-02T09:30')->call('inspectTime')->assertSee('Morning Lobby')->assertHasNoErrors();
     $this->user->revokePermissionTo('scheduler.view');
@@ -290,9 +290,9 @@ test('search and Playlist status type filters constrain the list and weekly view
     weeklySchedule($this, ['name' => 'Inactive Target', 'is_active' => false]);
     $component = Livewire::test(ScheduleTable::class)->set('typeFilter', 'once')->assertSee('Once Target')->assertDontSee('Inactive Target')
         ->set('typeFilter', '')->set('activeFilter', '0')->assertSee('Inactive Target');
-    $component->set('activeFilter', '')->set('search', 'No such Schedule')->assertSee('No schedules match these filters.')
-        ->set('view', 'weekly')->assertSee('No schedules in this view');
-    $component->set('search','')->set('playlistFilter',(string) $this->foreignPlaylist->id)->assertSee('No schedules in this view');
+    $component->set('activeFilter', '')->set('search', 'No such Schedule')->assertSee('Tidak ada jadwal yang cocok. Ubah filter atau buat jadwal baru.')
+        ->set('view', 'weekly')->assertSee('Belum ada jadwal pada tampilan ini');
+    $component->set('search','')->set('playlistFilter',(string) $this->foreignPlaylist->id)->assertSee('Belum ada jadwal pada tampilan ini');
 });
 
 test('Company deletion reports Schedule references without cascading into restricted Playlists',function () {

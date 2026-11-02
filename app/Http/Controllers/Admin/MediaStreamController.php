@@ -80,6 +80,10 @@ class MediaStreamController extends Controller
         $length = $end - $start + 1;
         $headers['Content-Length'] = (string) $length;
 
+        if (request()->isMethod('HEAD')) {
+            return response('', $status, $headers);
+        }
+
         return response()->stream(function () use ($filePath, $start, $length) {
             $handle = fopen($filePath, 'rb');
 

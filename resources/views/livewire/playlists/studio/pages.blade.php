@@ -11,14 +11,14 @@
             </button>
             @can('playlists.edit')
                 <div class="mt-2 flex justify-between border-t border-slate-700 pt-2 text-xs">
-                    <button type="button" class="text-cyan-300 hover:text-cyan-100" @click="selectPage({{ $page->id }}).then(ok => { if (ok) { tab = 'properties'; showProperties = true; } })">Properties</button>
-                    <button type="button" wire:click="deletePage({{ $page->id }})" wire:confirm="Delete this page and its windows?" :disabled="busy || !!gesture || {{ $pages->count() <= 1 ? 'true' : 'false' }}" wire:loading.attr="disabled" class="text-slate-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-30" title="Delete page" aria-label="Delete {{ $page->name }}"><x-studio-icon name="trash" /></button>
+                    <button type="button" class="text-cyan-300 hover:text-cyan-100" @click="selectPage({{ $page->id }}).then(ok => { if (ok) { advanced = true; selectWindow(null); showProperties = true; $nextTick(() => $refs.pageName.focus()); } })">Pengaturan Page</button>
+                    <button type="button" wire:click="deletePage({{ $page->id }})" wire:confirm="Hapus Page beserta semua Window di dalamnya?" :disabled="busy || !!gesture || {{ $pages->count() <= 1 ? 'true' : 'false' }}" wire:loading.attr="disabled" class="text-slate-400 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-30" title="Hapus Page" aria-label="Delete {{ $page->name }}"><x-studio-icon name="trash" /></button>
                 </div>
             @endcan
         </div>
-    @empty <p class="p-2 text-xs text-slate-400">This playlist has no pages. Add a page to begin.</p> @endforelse
+    @empty <p class="p-2 text-xs text-slate-400">Belum ada Page. Tambahkan Page untuk memulai.</p> @endforelse
     @can('playlists.edit')
-        <button type="button" @click="addPage()" :disabled="busy || !!gesture" wire:loading.attr="disabled" class="studio-button w-full justify-center border-dashed"><x-studio-icon name="plus" />Add Page</button>
+        <button type="button" @click="addPage()" :disabled="busy || !!gesture" wire:loading.attr="disabled" class="studio-button w-full justify-center border-dashed"><x-studio-icon name="plus" />Tambah Page</button>
     @endcan
     @error('pages') <p class="text-xs text-red-300" role="alert">{{ $message }}</p> @enderror
 </div>
