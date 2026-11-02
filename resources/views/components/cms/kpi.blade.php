@@ -1,0 +1,2 @@
+@props(['label', 'value', 'detail' => '', 'icon' => 'monitor'])
+<div class="dashboard-card"><div class="flex items-center justify-between gap-3 text-sm text-slate-500"><h2>{{ $label }}</h2><x-studio-icon :name="$icon" class="h-5 w-5 text-slate-400"/></div><p class="mt-5 text-3xl font-semibold tracking-tight text-slate-900" data-kpi="{{ $label }}">{{ number_format($value) }}</p><p class="mt-2 text-xs leading-relaxed text-slate-500">{{ $detail }}</p></div>

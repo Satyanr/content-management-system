@@ -9,20 +9,20 @@ export function browserStorage(name) { try { return globalThis[name]; } catch { 
 export function cmsGuide() {
     let preference, previousFocus, inert = new Map();
     return { open:false, never:false,
-        init() { preference=guidePreference(this.$el.dataset.userId,1,browserStorage('localStorage'),browserStorage('sessionStorage')); if(preference.shouldOpen()){preference.seen();this.show();} },
+        init() { preference=guidePreference(this.$el.dataset.userId,1,browserStorage('localStorage'),browserStorage('sessionStorage')); if(preference.shouldOpen())this.show(); },
         show() {
             if(this.open)return;this.never=preference.hidden();previousFocus=document.activeElement;this.open=true;
             for(const child of document.body.children) if(child!==this.$el && !child.contains(this.$el)){inert.set(child,child.inert);child.inert=true;}
             this.$nextTick(()=>this.$refs.start.focus());
         },
-        close() { this.open=false;for(const [node,value] of inert)node.inert=value;inert.clear();previousFocus?.focus?.(); },
+        close(markSeen = true) { if(this.open && markSeen)preference.seen();this.open=false;for(const [node,value] of inert)node.inert=value;inert.clear();previousFocus?.focus?.(); },
         finish() { preference.remember(this.never);preference.seen();this.close(); },
         trap(event) {
             const items=[...this.$refs.dialog.querySelectorAll('button,a,input')].filter(el=>!el.disabled && el.getClientRects().length);
             if(!items.length)return;const current=items.indexOf(document.activeElement),next=(current+(event.shiftKey?-1:1)+items.length)%items.length;
             event.preventDefault();items[next].focus();
         },
-        destroy(){this.close();},
+        destroy(){this.close(false);},
     };
 }
 if(typeof document!=='undefined')document.addEventListener('alpine:init',()=>window.Alpine.data('cmsGuide',cmsGuide));

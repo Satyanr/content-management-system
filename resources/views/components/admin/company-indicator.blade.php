@@ -1,51 +1,20 @@
 @php
-    use App\Models\Company;
-    use App\Services\WorkspaceService;
-
-    $user = auth()->user();
-
-    $isSuperAdmin = $user?->hasRole('super-admin') ?? false;
-
-    $workspaceService = app(WorkspaceService::class);
-
+    $workspaceService = app(\App\Services\WorkspaceService::class);
     $workspaceCompanyId = $workspaceService->companyId();
-
-    $company = $isSuperAdmin ? $workspaceService->company() : $user?->company;
-
-    $companies = $isSuperAdmin ? Company::query()->orderBy('name', 'asc')->get() : collect();
+    $isSuperAdmin = auth()->user()->hasRole('super-admin');
+    $company = $workspaceService->company();
 @endphp
-
-<div class="hidden items-center gap-2 lg:flex">
+<div class="flex min-w-0 sm:justify-end">
     @if ($isSuperAdmin)
-        <form method="POST" action="{{ route('admin.workspace.change') }}">
+        <form method="POST" action="{{ route('admin.workspace.change') }}" class="w-full sm:max-w-64">
             @csrf
-
-            <select name="company_id" onchange="this.form.submit()"
-                class="h-9 w-56 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-blue-500 focus:ring-blue-500">
-                <option value="">All Companies</option>
-
-                @foreach ($companies as $item)
-                    <option value="{{ $item->id }}" @selected((int) $workspaceCompanyId === (int) $item->id)>
-                        {{ $item->name }} / {{ $item->code }}
-                    </option>
-                @endforeach
+            <label class="sr-only" for="workspace-company">Workspace aktif</label>
+            <select id="workspace-company" name="company_id" onchange="this.form.submit()" class="min-h-11 w-full rounded-xl border-slate-200 bg-slate-50 text-sm text-slate-700 focus:border-blue-500 focus:ring-blue-500">
+                <option value="">Semua Perusahaan</option>
+                @foreach (\App\Models\Company::query()->orderBy('name')->get() as $item)<option value="{{ $item->id }}" @selected((int) $workspaceCompanyId === (int) $item->id)>{{ $item->name }} / {{ $item->code }}</option>@endforeach
             </select>
         </form>
     @else
-        <div class="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3">
-            <span class="text-sm font-medium text-gray-700">
-                {{ $company?->name ?? 'No Company' }}
-            </span>
-
-            @if ($company?->is_active)
-                <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">
-                    Active
-                </span>
-            @else
-                <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">
-                    Inactive
-                </span>
-            @endif
-        </div>
+        <div class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm"><x-studio-icon name="building" class="text-slate-400"/><span class="truncate text-slate-700">{{ $company?->name ?? 'Tanpa perusahaan' }}</span><span class="shrink-0 text-xs {{ $company?->is_active ? 'text-emerald-700' : 'text-red-700' }}">{{ $company?->is_active ? 'Aktif' : 'Nonaktif' }}</span></div>
     @endif
 </div>

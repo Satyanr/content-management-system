@@ -19,3 +19,23 @@
     background-size: 16px 16px;
 }
 .playlist-studio .studio-panel { max-width: 40vw; }
+
+@layer components {
+    .admin-nav-link { @apply flex min-h-12 items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400; }
+    .admin-nav-link.is-active { @apply bg-blue-500/20 text-blue-100 ring-1 ring-inset ring-blue-400/20; }
+    .dashboard-card { @apply min-w-0 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6; }
+}
+.admin-shell { min-height: 100vh; }
+.admin-sidebar { position:fixed; inset:0 auto 0 0; z-index:50; width:264px; max-width:calc(100vw - 32px); display:flex; flex-direction:column; background:#162134; transform:translateX(-100%); }
+.admin-sidebar.drawer-open { transform:translateX(0); }
+.admin-topbar { position:relative; z-index:30; }
+.admin-main { min-height:calc(100vh - 160px); max-width:1800px; }
+@media (min-width:1024px) {
+    .admin-sidebar { transform:translateX(0); }
+    .admin-topbar,.admin-main,.admin-footer { margin-left:264px; }
+    .is-collapsed .admin-sidebar { width:80px; }
+    .is-collapsed .admin-topbar,.is-collapsed .admin-main,.is-collapsed .admin-footer { margin-left:80px; }
+    .is-collapsed .admin-sidebar .nav-label { display:none; }
+    .is-collapsed .admin-sidebar .admin-nav-link { justify-content:center; }
+    .is-collapsed .admin-sidebar > div:first-child { padding-left:20px; padding-right:20px; }
+}

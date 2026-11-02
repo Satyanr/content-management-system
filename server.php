@@ -15,4 +15,5 @@ if (preg_match('#^/storage(?:/|$)#i', $uri) || ($storageRoot && $target && ($nor
     return true;
 }
 chdir($publicPath);
-require __DIR__.'/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php';
+// Propagate false so PHP's built-in server actually serves static assets.
+return require __DIR__.'/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php';

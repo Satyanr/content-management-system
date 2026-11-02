@@ -162,5 +162,6 @@ class MenuSeeder extends Seeder
                 'is_active' => true,
             ],
         );
+        $this->call(DashboardNavigationSeeder::class);
     }
 }

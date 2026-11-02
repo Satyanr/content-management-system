@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { guidePreference } from '../../resources/js/cms-guide.js';
+import { guidePreference, cmsGuide } from '../../resources/js/cms-guide.js';
 import { studioPreferences, studioUi } from '../../resources/js/studio-ui.js';
 import { mediaTransformStyle } from '../../resources/js/studio-geometry.js';
 const storage=()=>{const map=new Map();return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,value),removeItem:key=>map.delete(key)};};
@@ -29,4 +29,12 @@ test('changing selected media and presets leaves other items and Windows untouch
     const ui={...studioUi(),width:1920,height:1080,selectedZoneId:1,zones:{1:{items:[{id:1,mediaTransform:original},{id:2,mediaTransform:original}]},2:{x:500,y:0,width:100,height:100}},zoneForm:{x:0,y:0,width:800,height:600}};
     ui.syncMediaSelection();ui.mediaForm.scale=2;assert.equal(original.scale,1);assert.equal(ui.zones[2].width,100);
     ui.selectMedia(2);assert.equal(ui.mediaForm.scale,1);ui.windowPreset('left');assert.equal(ui.zoneForm.width,960);assert.equal(ui.zones[2].width,100);
+});
+
+test('welcome survives Livewire replacing an open initial modal and is seen only after dismissal',()=>{
+    const previous={localStorage:globalThis.localStorage,sessionStorage:globalThis.sessionStorage,document:globalThis.document};
+    globalThis.localStorage=storage();globalThis.sessionStorage=storage();globalThis.document={body:{children:[]},activeElement:{focus(){}}};
+    const create=()=>{const ui={...cmsGuide(),$el:{dataset:{userId:'7'}},$refs:{start:{focus(){}}},$nextTick:fn=>fn()};ui.init();return ui;};
+    try{const initial=create();assert.equal(initial.open,true);initial.destroy();const replacement=create();assert.equal(replacement.open,true);replacement.close();assert.equal(create().open,false);replacement.show();assert.equal(replacement.open,true);replacement.never=true;replacement.finish();assert.equal(globalThis.localStorage.getItem('cms.guide.v1.user.7'),'hidden');}
+    finally{Object.assign(globalThis,previous);}
 });

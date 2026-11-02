@@ -1,5 +1,1 @@
-<footer class="p-4 md:ml-64 bg-white border-t border-gray-200">
-    <div class="text-sm text-gray-500 text-center">
-        © {{ date('Y') }} Digital Signage CMS. All rights reserved.
-    </div>
-</footer>
+<footer class="admin-footer border-t border-slate-200 px-6 py-5 text-center text-xs text-slate-400">&copy; {{ date('Y') }} {{ $cmsAppName }}. Seluruh hak cipta dilindungi.</footer>
