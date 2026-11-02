@@ -116,6 +116,11 @@ class CompanyTable extends Component
             return;
         }
 
+        if ($company->schedules()->exists()) {
+            $this->error('Company cannot be deleted because it has schedules. Delete its schedules first.');
+            return;
+        }
+
         $companyService->delete($company);
 
         $this->success('Company deleted successfully.');

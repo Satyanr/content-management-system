@@ -33,6 +33,11 @@ class Playlist extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(Schedule::class);
+    }
+
     public function pages(): HasMany
     {
         return $this->hasMany(PlaylistPage::class)->orderBy('sort_order');

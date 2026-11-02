@@ -4,6 +4,7 @@ namespace App\Livewire\Playlists;
 
 use App\Models\Playlist;
 use App\Services\WorkspaceService;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -141,7 +142,21 @@ class PlaylistTable extends Component
         $companyId = $this->requireCompany($workspaceService);
 
         $playlist = Playlist::query()->forCompany($companyId)->findOrFail($id);
-        $playlist->deleteOrFail();
+        if ($playlist->schedules()->exists()) {
+            session()->flash('error', 'Playlist is used by a Schedule. Delete its schedules before deleting this Playlist.');
+
+            return;
+        }
+        try {
+            $playlist->deleteOrFail();
+        } catch (QueryException $e) {
+            if ((string) $e->getCode() !== '23000') {
+                throw $e;
+            }
+            session()->flash('error', 'Playlist is referenced by a Schedule and cannot be deleted.');
+
+            return;
+        }
         $this->resetPage();
         session()->flash('success', 'Playlist deleted successfully.');
     }

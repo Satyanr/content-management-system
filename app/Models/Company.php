@@ -16,6 +16,11 @@ class Company extends Model
         ];
     }
 
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(Schedule::class);
+    }
+
     public function playlists(): HasMany
     {
         return $this->hasMany(Playlist::class);

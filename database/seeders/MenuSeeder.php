@@ -122,9 +122,9 @@ class MenuSeeder extends Seeder
         Menu::query()->updateOrCreate(
             ['title' => 'Scheduler', 'parent_id' => null],
             [
-                'route' => null,
+                'route' => 'admin.scheduler.index',
                 'icon' => 'calendar',
-                'permission' => null,
+                'permission' => 'scheduler.view',
                 'sort_order' => 5,
                 'is_active' => true,
             ],
