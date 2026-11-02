@@ -5,22 +5,22 @@ namespace App\Http\Middleware;
 use App\Services\DeviceLifecycle;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthenticateDevice
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $credential = app(DeviceLifecycle::class)->authenticate($request->bearerToken());
+        $credential = app(DeviceLifecycle::class)->identify($request->bearerToken());
         if (! $credential) {
-            return response()->json(['message' => 'Invalid device credential.'], 401);
+            return response()->json(['message' => 'Invalid device credential.', 'error' => ['code' => 'invalid_token']], 401);
         }
-        $key = 'device-heartbeat:'.$credential->device_id;
-        if (RateLimiter::tooManyAttempts($key, 10)) {
-            return response()->json(['message' => 'Heartbeat rate limit exceeded.'], 429)->header('Retry-After', (string) RateLimiter::availableIn($key));
+        if ($credential->device->status !== 'active') {
+            return response()->json(['message' => 'Device is unavailable.', 'error' => ['code' => $credential->device->status === 'disabled' ? 'device_disabled' : 'invalid_token']], 401);
         }
-        RateLimiter::hit($key, 60);
+        if (! $credential->device->company->is_active) {
+            return response()->json(['message' => 'Company is unavailable.', 'error' => ['code' => 'company_inactive']], 401);
+        }
         $request->attributes->set('device_credential', $credential);
 
         return $next($request);

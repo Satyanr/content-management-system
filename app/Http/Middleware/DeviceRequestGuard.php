@@ -16,6 +16,13 @@ class DeviceRequestGuard
         if ($request->query->count()) {
             return response()->json(['message' => 'Use a JSON body and Authorization header, not query parameters.'], 422);
         }
+        if ($request->isMethod('GET') || $request->isMethod('HEAD')) {
+            if (! in_array(trim($request->getContent()), ['', '{}', '[]'], true)) {
+                return response()->json(['message' => 'Request body is not supported.'], 422);
+            }
+
+            return $next($request);
+        }
         if (! $request->isJson()) {
             return response()->json(['message' => 'JSON content type is required.'], 415);
         }

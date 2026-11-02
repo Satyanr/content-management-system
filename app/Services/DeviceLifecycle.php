@@ -118,11 +118,19 @@ class DeviceLifecycle
 
     public function authenticate(#[\SensitiveParameter] ?string $token): ?DeviceCredential
     {
+        $credential = $this->identify($token);
+
+        return $credential && $credential->device?->status === 'active' && $credential->device?->company?->is_active ? $credential : null;
+    }
+
+    /** Verify the secret before disclosing device/company state. */
+    public function identify(#[\SensitiveParameter] ?string $token): ?DeviceCredential
+    {
         if (! $token || ! preg_match('/^dvc_([a-f0-9]{32})\.([a-f0-9]{64})$/D', $token, $parts)) {
             return null;
         }
         $credential = DeviceCredential::where('token_identifier', $parts[1])->with('device.company')->first();
-        if (! $credential || $credential->revoked_at || ! hash_equals($credential->token_hash, hash('sha256', $parts[2])) || $credential->device?->status !== 'active' || ! $credential->device?->company?->is_active) {
+        if (! $credential || $credential->revoked_at || ! hash_equals($credential->token_hash, hash('sha256', $parts[2])) || ! $credential->device?->company) {
             return null;
         }
 
@@ -156,7 +164,7 @@ class DeviceLifecycle
             $device->forceFill($data)->save();
             $credential->forceFill(['last_used_at' => $now])->save();
 
-            return ['status' => 'ok', 'device_public_id' => $device->public_id, 'server_time_utc' => $now->toIso8601String(), 'heartbeat_interval_seconds' => (int) config('devices.heartbeat_interval_seconds',60)];
+            return ['status' => 'ok', 'device_public_id' => $device->public_id, 'server_time_utc' => $now->toIso8601String(), 'heartbeat_interval_seconds' => (int) config('devices.heartbeat_interval_seconds', 60)];
         });
     }
 }

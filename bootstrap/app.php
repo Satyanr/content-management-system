@@ -3,6 +3,8 @@
 use App\Http\Middleware\AuthenticateDevice;
 use App\Http\Middleware\CheckCmsMaintenance;
 use App\Http\Middleware\CheckCompanyActive;
+use App\Http\Middleware\DeviceApiContext;
+use App\Http\Middleware\DeviceEndpointLimit;
 use App\Http\Middleware\DeviceRequestGuard;
 use App\Http\Middleware\ProtectLegacyMediaStorage;
 use App\Http\Middleware\UpdateLoginLastActivity;
@@ -20,9 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(ProtectLegacyMediaStorage::class);
         $middleware->prependToPriorityList(ThrottleRequests::class, DeviceRequestGuard::class);
+        $middleware->prependToPriorityList(DeviceRequestGuard::class, DeviceApiContext::class);
         $middleware->alias([
             'device.payload' => DeviceRequestGuard::class,
             'device.auth' => AuthenticateDevice::class,
+            'device.context' => DeviceApiContext::class,
+            'device.limit' => DeviceEndpointLimit::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
@@ -32,6 +37,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (Throwable $exception, Request $request) {
+            if ($request->is('api/device/*')) {
+                return DeviceApiContext::exceptionResponse($exception, $request);
+            }
+
+            return null;
+        });
         $exceptions->dontFlash(['activation_code', 'credential', 'token', 'token_hash', 'code_hash']);
         $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*'));
     })
