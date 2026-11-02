@@ -354,6 +354,7 @@ class MediaTable extends Component
     {
         Gate::authorize('media.view');
 
+        abort_if($workspaceService->companyId() === null, 403, 'Select a company workspace to preview media.');
         MediaAsset::query()->forCompany($workspaceService->companyId())->findOrFail($id);
 
         $this->previewMediaId = $id;

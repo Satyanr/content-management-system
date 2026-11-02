@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Tenant media must pass the authenticated controller, including existing files.
+    RewriteRule ^storage(?:/|$) - [F,L,NC]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

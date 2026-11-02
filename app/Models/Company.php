@@ -16,6 +16,9 @@ class Company extends Model
         ];
     }
 
+    public function devices(): HasMany { return $this->hasMany(Device::class); }
+    public function deviceGroups(): HasMany { return $this->hasMany(DeviceGroup::class); }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);

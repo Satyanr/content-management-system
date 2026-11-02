@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PlaylistController;
 use App\Http\Controllers\Admin\SchedulerController;
+use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
@@ -53,6 +54,8 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
             ->whereNumber('playlist')
             ->middleware('permission:playlists.view')
             ->name('playlists.studio');
+        Route::get('/devices', [DeviceController::class, 'index'])->middleware('permission:devices.view')->name('devices.index');
+        Route::get('/devices/{publicId}', [DeviceController::class, 'show'])->whereUuid('publicId')->middleware('permission:devices.view')->name('devices.show');
         Route::get('/scheduler', [SchedulerController::class, 'index'])
             ->middleware('permission:scheduler.view')->name('scheduler.index');
         Route::get('/playlists', [PlaylistController::class, 'index'])

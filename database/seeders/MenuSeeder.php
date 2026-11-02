@@ -133,9 +133,9 @@ class MenuSeeder extends Seeder
         Menu::query()->updateOrCreate(
             ['title' => 'Devices', 'parent_id' => null],
             [
-                'route' => null,
+                'route' => 'admin.devices.index',
                 'icon' => 'device',
-                'permission' => null,
+                'permission' => 'devices.view',
                 'sort_order' => 6,
                 'is_active' => true,
             ],

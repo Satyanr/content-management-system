@@ -83,8 +83,10 @@ class MediaUploadController extends Controller
                     . '/media/'
                     . now()->format('Y/m'),
                 $fileName,
-                'public'
+                'local'
             );
+
+            abort_unless(is_string($path) && $path !== '', 500, 'Media storage failed.');
 
             $media = MediaAsset::create([
                 'company_id' => $companyId,
@@ -99,7 +101,7 @@ class MediaUploadController extends Controller
                 'original_name' => $originalName,
                 'file_name' => $fileName,
 
-                'disk' => 'public',
+                'disk' => 'local',
                 'path' => $path,
 
                 'mime_type' => $mimeType,

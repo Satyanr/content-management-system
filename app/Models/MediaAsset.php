@@ -28,7 +28,7 @@ class MediaAsset extends Model
 
     public function getUrlAttribute(): string
     {
-        return asset('storage/' . ltrim($this->path, '/'));
+        return route('admin.media-assets.stream', $this->id);
     }
     
     public function folder(): BelongsTo

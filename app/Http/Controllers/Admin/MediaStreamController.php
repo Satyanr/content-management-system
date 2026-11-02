@@ -7,6 +7,7 @@ use App\Models\MediaAsset;
 use App\Services\WorkspaceService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\Response;
 
 class MediaStreamController extends Controller
@@ -15,12 +16,16 @@ class MediaStreamController extends Controller
     {
         Gate::authorize('media.view');
 
+        $companyId = $workspaceService->companyId();
+        abort_if($companyId === null, 403, 'Select a company workspace to access media.');
+        abort_unless($workspaceService->company()?->is_active, 403, 'Workspace is unavailable.');
+
         MediaAsset::query()
-            ->forCompany($workspaceService->companyId())
+            ->forCompany($companyId)
             ->whereKey($media->id)
             ->firstOrFail();
 
-        if (! in_array($media->type, ['image', 'video'], true)) {
+        if (! in_array($media->type, ['image', 'video', 'pdf'], true)) {
             abort(404);
         }
 
@@ -42,9 +47,10 @@ class MediaStreamController extends Controller
         $status = Response::HTTP_OK;
 
         $headers = [
-            'Content-Type' => $media->mime_type ?: ($media->type === 'video' ? 'video/mp4' : 'application/octet-stream'),
+            'Content-Type' => $media->mime_type ?: ($media->type === 'video' ? 'video/mp4' : ($disk->mimeType($media->path) ?: 'application/octet-stream')),
             'Accept-Ranges' => 'bytes',
-            'Content-Disposition' => 'inline; filename="'.addslashes($media->file_name).'"',
+            'Content-Disposition' => HeaderUtils::makeDisposition('inline', basename($media->file_name), 'media'),
+            'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, no-store',
         ];
 

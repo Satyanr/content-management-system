@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\ActivityLog;
 use App\Core\Services\BaseService;
+use App\Models\ActivityLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,12 +15,14 @@ class ActivityLogService extends BaseService
         ?string $description = null,
         ?Model $subject = null,
         ?array $oldValues = null,
-        ?array $newValues = null
+        ?array $newValues = null,
+        ?int $companyId = null,
+        bool $systemActor = false
     ): ActivityLog {
-        $user = Auth::user();
+        $user = $systemActor ? null : Auth::user();
 
         return ActivityLog::query()->create([
-            'company_id' => $user?->company_id,
+            'company_id' => $companyId ?? $user?->company_id,
             'user_id' => $user?->id,
             'module' => $module,
             'action' => $action,

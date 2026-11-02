@@ -693,7 +693,9 @@
                 {{ $isSelected ? 'bg-blue-600/10' : '' }}">
                         </div>
 
-                        @if ($media->type === 'image')
+                        @if ($isAllCompanies)
+                            <div class="flex h-full w-full items-center justify-center bg-gray-100 p-3 text-center text-xs text-gray-500">Select a workspace to access this media.</div>
+                        @elseif ($media->type === 'image')
                             <img src="{{ $media->url }}" alt="{{ $media->title }}"
                                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105">
                         @elseif ($media->type === 'video')
