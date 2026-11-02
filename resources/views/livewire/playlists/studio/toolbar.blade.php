@@ -6,7 +6,7 @@
             <span class="hidden text-sm text-slate-400 lg:inline">Playlist Studio /</span>
             <input aria-label="Playlist name" wire:model="name" @input="dirty = true" @cannot('playlists.edit') readonly @endcannot maxlength="150" class="min-w-0 flex-1 truncate rounded border-transparent bg-transparent px-2 py-1 text-sm font-semibold text-white focus:border-cyan-500 focus:ring-cyan-500" />
         </div>
-        <button x-ref="previewTrigger" type="button" class="studio-button" title="Preview saved layout" @click="openPreview()"><x-studio-icon name="eye" /><span class="hidden sm:inline">Preview Layout</span></button>
+        <button x-ref="previewTrigger" type="button" class="studio-button" title="Open Playback Preview" @click="openPreview()"><x-studio-icon name="eye" /><span class="hidden sm:inline">Playback Preview</span></button>
         @can('playlists.edit')
             <button type="button" class="studio-button !border-cyan-600 !bg-cyan-600 text-white hover:!bg-cyan-500" @click="saveAll()" :disabled="busy || !!gesture" wire:loading.attr="disabled"><x-studio-icon name="save" />Save</button>
         @else <span class="text-xs text-slate-400">View only</span> @endcan

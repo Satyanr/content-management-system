@@ -102,6 +102,7 @@ class PlaylistStudio extends Component
             }
         });
         $this->dispatch('studio-saved', width: (int) $data['canvasWidth'], height: (int) $data['canvasHeight']);
+        $this->dispatch('studio-playback-invalidated');
         session()->flash('success', 'Playlist and page properties saved.');
 
         return true;
@@ -120,6 +121,7 @@ class PlaylistStudio extends Component
             ])->id;
         });
         $this->selectPage($id);
+        $this->dispatch('studio-playback-invalidated');
         session()->flash('success', 'Page added.');
     }
 
@@ -143,6 +145,7 @@ class PlaylistStudio extends Component
             if ($this->activePageId === $id) {
                 $this->selectPage($this->playlist()->pages()->firstOrFail()->id);
             }
+            $this->dispatch('studio-playback-invalidated');
             session()->flash('success', 'Page deleted.');
         }
     }
@@ -185,6 +188,7 @@ class PlaylistStudio extends Component
             'zones' => $activePage?->zones->map(fn ($zone) => $zone->only(['id', 'name', 'x', 'y', 'width', 'height', 'z_index', 'keep_aspect_ratio', 'fit_mode', 'is_visible', 'is_locked']) + [
                 'items' => $zone->items->map(fn ($item) => [
                     'id' => $item->id, 'sort_order' => $item->sort_order,
+                    'duration' => $item->duration_seconds ?? ($item->mediaAsset?->type === 'image' ? 10 : null),
                     'title' => Gate::allows('media.view') ? ($item->mediaAsset?->title ?? 'Unavailable media') : 'Media',
                 ])->values()->all(),
             ])->values()->all() ?? [],

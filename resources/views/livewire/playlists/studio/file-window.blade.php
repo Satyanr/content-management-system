@@ -10,12 +10,18 @@
                 <div>Layer: {{ $zone->z_index }} / {{ $zone->fit_mode }} / {{ $zone->keep_aspect_ratio ? 'Keep ratio' : 'Free ratio' }}</div>
                 <div>{{ $zone->is_visible ? 'Visible' : 'Hidden' }} / {{ $zone->is_locked ? 'Locked' : 'Unlocked' }}</div>
             </dl>
-            <p class="mt-2 text-[10px] text-slate-500">Canvas preview shows the first item.</p>
+            <p class="mt-2 text-[10px] text-slate-500">Edit mode shows the first item. Timeline/Playback Preview plays the sequence.</p>
             <ol class="mt-2 space-y-2">
                 @foreach ($zone->items as $item)
                     <li wire:key="window-item-{{ $item->id }}" class="rounded bg-slate-900 p-2 text-xs">
                         <p class="truncate">{{ $loop->iteration }}. {{ auth()->user()->can('media.view') ? ($item->mediaAsset?->title ?? 'Unavailable media') : 'Media' }}</p>
+                        <p class="mt-1 text-[10px] text-slate-400" x-text="fileDurationLabel({{ $item->id }})">{{ $item->duration_seconds !== null ? $item->duration_seconds.'s' : ($item->mediaAsset?->type === 'image' ? '10s' : 'Auto / intrinsic video duration') }}</p>
                         @can('playlists.edit')
+                            <div class="mt-2 flex flex-wrap items-center gap-1">
+                                <input x-init="if (durationDrafts[{{ $item->id }}] === undefined) durationDrafts[{{ $item->id }}] = {{ $item->duration_seconds ?? ($item->mediaAsset?->type === 'image' ? 10 : "''") }}" aria-label="Duration seconds for item {{ $item->id }}" type="number" min="1" max="86400" :value="durationDrafts[{{ $item->id }}] ?? {{ $item->duration_seconds ?? ($item->mediaAsset?->type === 'image' ? 10 : 'null') }}" @input="durationDrafts[{{ $item->id }}] = $event.target.value" placeholder="Auto" class="studio-input !w-20 !p-1 !text-xs">
+                                <button type="button" @click="saveDuration({{ $zone->id }}, {{ $item->id }})" :disabled="busy" class="studio-button !p-1">Save duration</button>
+                                @if ($item->mediaAsset?->type === 'video')<button type="button" @click="saveDuration({{ $zone->id }}, {{ $item->id }}, true)" :disabled="busy" class="studio-button !p-1">Auto</button>@endif
+                            </div>
                             <div class="mt-2 flex gap-1">
                                 <button type="button" @click="moveItem({{ $zone->id }}, {{ $item->id }}, -1)" :disabled="busy || {{ $loop->first ? 'true' : 'false' }}" class="studio-button !p-1" title="Move earlier">Up</button>
                                 <button type="button" @click="moveItem({{ $zone->id }}, {{ $item->id }}, 1)" :disabled="busy || {{ $loop->last ? 'true' : 'false' }}" class="studio-button !p-1" title="Move later">Down</button>

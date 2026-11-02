@@ -59,7 +59,7 @@ class PlaylistWindowEditor
                 'z_index' => (int) $page->zones()->max('z_index') + 1,
                 'keep_aspect_ratio' => true, 'fit_mode' => 'contain',
             ]);
-            $zone->items()->create(['media_asset_id' => $media->id, 'sort_order' => 1, 'settings' => ['editor_request_id' => $token]]);
+            $zone->items()->create(['media_asset_id' => $media->id, 'sort_order' => 1, 'duration_seconds' => $media->type === 'image' ? 10 : null, 'settings' => ['editor_request_id' => $token]]);
 
             return $zone;
         });
@@ -123,8 +123,20 @@ class PlaylistWindowEditor
             $media = $this->media($playlist, $mediaId);
             validator(['token' => $token], ['token' => ['required', 'uuid']])->validate();
             if (! $zone->items()->where('settings->editor_request_id', $token)->exists()) {
-                $zone->items()->create(['media_asset_id' => $media->id, 'sort_order' => (int) $zone->items()->max('sort_order') + 1, 'settings' => ['editor_request_id' => $token]]);
+                $zone->items()->create(['media_asset_id' => $media->id, 'sort_order' => (int) $zone->items()->max('sort_order') + 1, 'duration_seconds' => $media->type === 'image' ? 10 : null, 'settings' => ['editor_request_id' => $token]]);
             }
+        });
+    }
+
+    public function updateItemDuration(int $playlistId, int $pageId, int $zoneId, int $itemId, $seconds): void
+    {
+        DB::transaction(function () use ($playlistId, $pageId, $zoneId, $itemId, $seconds) {
+            [$playlist, $page] = $this->page($playlistId, $pageId);
+            $item = $page->zones()->findOrFail($zoneId)->items()->findOrFail($itemId);
+            $media = MediaAsset::where('company_id', $playlist->company_id)->whereIn('type', ['image', 'video'])->findOrFail($item->media_asset_id);
+            validator(['duration' => $seconds], ['duration' => $seconds === null && $media->type === 'video'
+                ? ['nullable'] : ['required', 'integer', 'between:1,86400']])->validate();
+            $item->update(['duration_seconds' => $seconds]);
         });
     }
 

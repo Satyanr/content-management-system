@@ -59,14 +59,16 @@ test('editor zoom never changes output dimensions and fit responds to panel chan
     assert.equal(disconnected, true);
 });
 
-test('layout preview fits without changing editor zoom and restores focus', () => {
+test('playback preview loads saved data without changing editor zoom and restores focus', async () => {
     let closeFocused = false;
     let triggerFocused = false;
     const ui = playlistStudio();
     ui.$nextTick = fn => fn();
     ui.$refs = { closePreview: { focus() { closeFocused = true; } }, previewTrigger: { focus() { triggerFocused = true; } } };
+    ui.$wire = { getPlaybackManifest: async () => ({ id: 1, width: 1920, height: 1080, pages: [{ id: 1, duration: 15, zones: [] }] }) };
+    ui.perform = async action => action();
     ui.scale = 0.75;
-    ui.openPreview();
+    await ui.openPreview();
     assert.equal(ui.preview, true);
     assert.ok(ui.width * ui.previewScale <= window.innerWidth - 64);
     assert.ok(ui.height * ui.previewScale <= window.innerHeight - 144);
@@ -75,4 +77,5 @@ test('layout preview fits without changing editor zoom and restores focus', () =
     ui.closePreview();
     assert.equal(ui.preview, false);
     assert.equal(triggerFocused, true);
+    ui.destroyPlayback();
 });

@@ -1,5 +1,7 @@
 <div class="playlist-studio flex h-screen h-[100dvh] min-h-0 flex-col overflow-hidden bg-slate-950 text-slate-200"
     x-data="playlistStudio" data-width="{{ $playlist->canvas_width }}" data-height="{{ $playlist->canvas_height }}"
+    @studio-playback-invalidated.window="invalidatePlayback()"
+    @keydown.window="playbackKey($event)"
     @studio-editor-sync.window="syncEditor($event.detail.data)"
     @studio-select-window.window="requestSelection($event.detail.id)"
     @studio-canvas-resized.window="applyCanvas($event.detail.width, $event.detail.height)"
@@ -34,16 +36,17 @@
             <div x-ref="viewport" class="studio-workspace min-h-0 flex-1 overflow-auto p-8" tabindex="0" aria-label="Scrollable canvas">
                 <div class="flex w-max min-h-full min-w-full items-center justify-center">
                     <div class="relative shrink-0" :style="{ width: width * scale + 'px', height: height * scale + 'px' }">
-                        <div x-ref="canvas" @dragover="dragOver($event)" @drop="dropMedia($event)" @dragleave.self="dropGhost = null" @pointerdown.self="selectWindow(null)" class="absolute left-0 top-0 origin-top-left overflow-hidden outline outline-1 outline-dashed outline-slate-500 shadow-2xl"
+                        <div x-show="!playbackMode" x-ref="canvas" @dragover="dragOver($event)" @drop="dropMedia($event)" @dragleave.self="dropGhost = null" @pointerdown.self="selectWindow(null)" class="absolute left-0 top-0 origin-top-left overflow-hidden outline outline-1 outline-dashed outline-slate-500 shadow-2xl"
                             :style="{ width: width + 'px', height: height + 'px', transform: 'scale(' + scale + ')', backgroundImage: gridEnabled ? 'linear-gradient(#64748b44 1px, transparent 1px), linear-gradient(90deg, #64748b44 1px, transparent 1px)' : 'none', backgroundSize: gridSize + 'px ' + gridSize + 'px' }"
                             style="background-color: {{ $playlist->background_color }}" aria-label="Playlist output canvas">
                             @include('livewire.playlists.studio.windows', ['interactive' => true])
                             <div x-cloak x-show="dropGhost" class="pointer-events-none absolute border-2 border-dashed border-cyan-300 bg-cyan-500/30" :style="dropGhost ? { left: dropGhost.x + 'px', top: dropGhost.y + 'px', width: dropGhost.width + 'px', height: dropGhost.height + 'px', zIndex: 2000000 } : {}"></div>
                         </div>
-                        @include('livewire.playlists.studio.empty-canvas')
+                        <div x-show="playbackMode" x-ref="inlinePlayback" wire:ignore class="absolute inset-0 z-30 overflow-hidden"></div>
+                        <div x-show="!playbackMode">@include('livewire.playlists.studio.empty-canvas')</div>
                         @can('playlists.edit')
                             @foreach (['e' => 'right: -6px; top: 25%; width: 12px; height: 50%; cursor: ew-resize', 's' => 'bottom: -6px; left: 25%; height: 12px; width: 50%; cursor: ns-resize', 'se' => 'right: -6px; bottom: -6px; width: 14px; height: 14px; cursor: nwse-resize'] as $handle => $style)
-                                <button type="button" @pointerdown="startCanvas($event, '{{ $handle }}')" :disabled="busy" class="absolute z-20 touch-none rounded border border-cyan-300 bg-cyan-500/50 hover:bg-cyan-400" style="{{ $style }}" title="Resize canvas {{ $handle }}" aria-label="Resize canvas {{ $handle }}"></button>
+                                <button type="button" x-show="!playbackMode" @pointerdown="startCanvas($event, '{{ $handle }}')" :disabled="busy" class="absolute z-20 touch-none rounded border border-cyan-300 bg-cyan-500/50 hover:bg-cyan-400" style="{{ $style }}" title="Resize canvas {{ $handle }}" aria-label="Resize canvas {{ $handle }}"></button>
                             @endforeach
                         @endcan
                     </div>
@@ -54,6 +57,7 @@
                 <span x-cloak x-show="gesture" class="text-cyan-300" x-text="gesture?.type === 'canvas' ? width + ' x ' + height + ' px' : (zoneForm ? 'X ' + zoneForm.x + ' Y ' + zoneForm.y + ' / ' + zoneForm.width + ' x ' + zoneForm.height + ' px' : '')"></span>
                 <span>Zoom <span x-text="Math.round(scale * 100) + '%'"></span><span x-show="fitMode"> / Fit</span></span>
             </footer>
+            @include('livewire.playlists.studio.timeline', ['inPreview' => false])
         </main>
         <aside x-show="showProperties" :style="{ width: rightWidth + 'px' }" class="studio-panel shrink-0 overflow-y-auto border-l border-slate-800 bg-slate-900" aria-label="Studio library and properties">
             <div class="sticky top-0 z-10 grid grid-cols-3 border-b border-slate-800 bg-slate-900 p-2" role="tablist" aria-label="Studio panels" @keydown.right.prevent="cycleTab(1)" @keydown.left.prevent="cycleTab(-1)">
@@ -67,16 +71,5 @@
         </aside>
     </div>
 
-    <div x-cloak x-show="preview" class="fixed inset-0 z-50 flex flex-col bg-slate-950 p-6" role="dialog" aria-modal="true" aria-label="Layout preview" @keydown.tab.prevent="$refs.closePreview.focus()">
-        <div class="mb-4 flex items-center justify-between gap-4">
-            <div><h2 class="font-semibold">Layout Preview - {{ $playlist->name }}</h2><p class="text-xs text-slate-400">Saved layout / {{ $playlist->canvas_width }} &times; {{ $playlist->canvas_height }} / {{ $activePage?->name }} / No playback</p></div>
-            <button x-ref="closePreview" type="button" class="studio-button" @click="closePreview()"><x-studio-icon name="close" /> Close</button>
-        </div>
-        <div class="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-            <div class="relative overflow-hidden outline outline-1 outline-slate-600" :style="{ width: width * previewScale + 'px', height: height * previewScale + 'px', backgroundColor: '{{ $playlist->background_color }}' }">
-                @include('livewire.playlists.studio.windows', ['interactive' => false])
-                @include('livewire.playlists.studio.empty-canvas')
-            </div>
-        </div>
-    </div>
+    @include('livewire.playlists.studio.playback-preview')
 </div>

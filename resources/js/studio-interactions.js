@@ -65,7 +65,10 @@ export function studioInteractions() {
                 this.error = 'The change could not be saved. Check your connection, permissions and current workspace.';
                 if (lastData) this.syncEditor(lastData);
                 return false;
-            } finally { rejectRequest = null; this.busy = false; }
+            } finally {
+                rejectRequest = null; this.busy = false;
+                if(this.playbackStale && this.playbackManifest && !this.loadingPlayback)this.$nextTick(()=>this.loadPlayback());
+            }
         },
         windowStyle(id) {
             const z = this.zones[id];

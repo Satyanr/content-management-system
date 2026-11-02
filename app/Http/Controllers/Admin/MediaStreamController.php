@@ -20,7 +20,7 @@ class MediaStreamController extends Controller
             ->whereKey($media->id)
             ->firstOrFail();
 
-        if ($media->type !== 'video') {
+        if (! in_array($media->type, ['image', 'video'], true)) {
             abort(404);
         }
 
@@ -42,35 +42,32 @@ class MediaStreamController extends Controller
         $status = Response::HTTP_OK;
 
         $headers = [
-            'Content-Type' => $media->mime_type ?: 'video/mp4',
+            'Content-Type' => $media->mime_type ?: ($media->type === 'video' ? 'video/mp4' : 'application/octet-stream'),
             'Accept-Ranges' => 'bytes',
-            'Content-Disposition' => 'inline; filename="' . addslashes($media->file_name) . '"',
-            'Cache-Control' => 'public, max-age=31536000',
+            'Content-Disposition' => 'inline; filename="'.addslashes($media->file_name).'"',
+            'Cache-Control' => 'private, no-store',
         ];
 
         $range = request()->header('Range');
 
-        if ($range && preg_match('/bytes=(\d*)-(\d*)/', $range, $matches)) {
+        if ($range) {
+            if (! preg_match('/^bytes=(\d*)-(\d*)$/', $range, $matches) || ($matches[1] === '' && $matches[2] === '') || $size === 0) {
+                return response('', 416, ['Content-Range' => "bytes */{$size}"]);
+            }
             $status = Response::HTTP_PARTIAL_CONTENT;
-
-            if ($matches[1] !== '') {
+            if ($matches[1] === '') {
+                $suffix = (int) $matches[2];
+                if ($suffix < 1) {
+                    return response('', 416, ['Content-Range' => "bytes */{$size}"]);
+                }
+                $start = max(0, $size - $suffix);
+            } else {
                 $start = (int) $matches[1];
+                $end = $matches[2] !== '' ? min((int) $matches[2], $size - 1) : $size - 1;
             }
-
-            if ($matches[2] !== '') {
-                $end = (int) $matches[2];
-            }
-
-            if ($end > $size - 1) {
-                $end = $size - 1;
-            }
-
             if ($start > $end || $start >= $size) {
-                return response('', Response::HTTP_REQUESTED_RANGE_NOT_SATISFIABLE, [
-                    'Content-Range' => "bytes */{$size}",
-                ]);
+                return response('', 416, ['Content-Range' => "bytes */{$size}"]);
             }
-
             $headers['Content-Range'] = "bytes {$start}-{$end}/{$size}";
         }
 

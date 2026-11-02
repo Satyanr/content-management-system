@@ -1,3 +1,4 @@
+import { studioTimeline } from './studio-timeline.js';
 import { studioInteractions } from './studio-interactions.js';
 // Zoom is editor state only; canvas and zone data remain in output pixels.
 export function clampZoom(value) {
@@ -14,6 +15,7 @@ export function playlistStudio() {
     let observer;
     return {
         ...studioInteractions(),
+        ...studioTimeline(),
         width: 1920, height: 1080, scale: 0.35, fitMode: true,
         leftWidth: 220, rightWidth: 300, showPages: true, showProperties: true,
         tab: 'library', preview: false, previewScale: 0.35, settings: false, dirty: false,
@@ -21,11 +23,12 @@ export function playlistStudio() {
             this.width = Number(this.$el.dataset.width);
             this.height = Number(this.$el.dataset.height);
             this.initializeInteractions();
+            this.initializePlayback();
             observer = new ResizeObserver(() => { if (this.fitMode && !this.gesture) this.fit(); this.fitPreview(); });
             observer.observe(this.$refs.viewport);
             this.$nextTick(() => this.fit());
         },
-        destroy() { observer?.disconnect(); this.destroyInteractions(); },
+        destroy() { observer?.disconnect(); this.destroyInteractions(); this.destroyPlayback(); },
         zoom(delta) {
             if (this.gesture) return;
             this.fitMode = false;
@@ -44,17 +47,8 @@ export function playlistStudio() {
             this.fitPreview();
         },
         fitPreview() {
+            if(this.preview && this.$refs.previewArea){this.fitPlaybackPreview();return;}
             this.previewScale = fitScale(this.width, this.height, window.innerWidth, window.innerHeight - 80, 64);
-        },
-        openPreview() {
-            if (this.busy || this.gesture) return;
-            this.preview = true;
-            this.fitPreview();
-            this.$nextTick(() => this.$refs.closePreview.focus());
-        },
-        closePreview() {
-            this.preview = false;
-            this.$refs.previewTrigger.focus();
         },
         cycleTab(direction) {
             const tabs = ['library', 'windows', 'properties'];
@@ -64,7 +58,8 @@ export function playlistStudio() {
         async selectPage(id) {
             if (this.busy || this.gesture) return;
             if ((this.dirty || this.zoneDirty) && !window.confirm('Switch page? Unsaved page/Window properties will be discarded.')) return;
-            return this.perform(async () => { await this.$wire.selectPage(id); return true; }, { refreshForm: false });
+            const ok=await this.perform(async () => { await this.$wire.selectPage(id); return true; }, { refreshForm: false });
+            if(ok)this.editPagePlayback(id);return ok;
         },
         async addPage() {
             if (this.busy || this.gesture) return;
