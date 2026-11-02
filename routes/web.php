@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\PlaylistController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
@@ -47,6 +48,13 @@ Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.
         Route::get('/login-histories', [LoginHistoryController::class, 'index'])
             ->middleware('permission:login_histories.view')
             ->name('login-histories.index');
+        Route::get('/playlists/{playlist}/studio', [PlaylistController::class, 'studio'])
+            ->whereNumber('playlist')
+            ->middleware('permission:playlists.view')
+            ->name('playlists.studio');
+        Route::get('/playlists', [PlaylistController::class, 'index'])
+            ->middleware('permission:playlists.view')
+            ->name('playlists.index');
         Route::post('/workspace/change', [WorkspaceController::class, 'change'])->name('workspace.change');
         Route::get('/media-assets', [MediaAssetController::class, 'index'])
             ->middleware('permission:media.view')

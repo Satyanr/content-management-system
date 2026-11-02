@@ -111,9 +111,9 @@ class MenuSeeder extends Seeder
         Menu::query()->updateOrCreate(
             ['title' => 'Playlist', 'parent_id' => null],
             [
-                'route' => null,
+                'route' => 'admin.playlists.index',
                 'icon' => 'playlist',
-                'permission' => null,
+                'permission' => 'playlists.view',
                 'sort_order' => 4,
                 'is_active' => true,
             ],

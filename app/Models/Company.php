@@ -16,6 +16,11 @@ class Company extends Model
         ];
     }
 
+    public function playlists(): HasMany
+    {
+        return $this->hasMany(Playlist::class);
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

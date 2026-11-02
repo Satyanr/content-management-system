@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+[x-cloak] { display: none !important; }
+
+@layer components {
+    .playlist-studio .studio-button {
+        @apply inline-flex items-center gap-2 rounded-md border border-slate-600 bg-slate-800 px-2.5 py-2 text-xs font-medium text-slate-200 transition hover:border-slate-400 hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:cursor-not-allowed disabled:opacity-40;
+    }
+    .playlist-studio .studio-input {
+        @apply w-full min-w-0 rounded-md border-slate-600 bg-slate-800 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-400 focus:ring-cyan-400 disabled:opacity-60;
+    }
+    .playlist-studio .studio-label { @apply text-xs text-slate-300; }
+}
+.playlist-studio .studio-workspace {
+    background-color: #10151f;
+    background-image: radial-gradient(#334155 0.7px, transparent 0.7px);
+    background-size: 16px 16px;
+}
+.playlist-studio .studio-panel { max-width: 40vw; }

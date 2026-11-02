@@ -23,7 +23,7 @@ class RolePermissionSeeder extends Seeder
             ],
         );
 
-        $permissions = ['dashboard.view', 'users.view', 'users.create', 'users.edit', 'users.delete', 'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'settings.view', 'settings.edit', 'companies.view', 'companies.create', 'companies.edit', 'companies.delete', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete', 'menus.view', 'menus.create', 'menus.edit', 'menus.delete', 'activity_logs.view', 'login_histories.view', 'media.view', 'media.create', 'media.edit', 'media.delete'];
+        $permissions = ['dashboard.view', 'users.view', 'users.create', 'users.edit', 'users.delete', 'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'settings.view', 'settings.edit', 'companies.view', 'companies.create', 'companies.edit', 'companies.delete', 'permissions.view', 'permissions.create', 'permissions.edit', 'permissions.delete', 'menus.view', 'menus.create', 'menus.edit', 'menus.delete', 'activity_logs.view', 'login_histories.view', 'media.view', 'media.create', 'media.edit', 'media.delete', 'playlists.view', 'playlists.create', 'playlists.edit', 'playlists.delete'];
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
@@ -33,11 +33,11 @@ class RolePermissionSeeder extends Seeder
         $admin = Role::firstOrCreate(['name' => 'admin']);
         $operator = Role::firstOrCreate(['name' => 'operator']);
 
-        $superAdmin->syncPermissions(Permission::all());
+        $superAdmin->givePermissionTo(Permission::all());
 
-        $admin->syncPermissions(['dashboard.view', 'users.view', 'users.create', 'users.edit', 'roles.view', 'permissions.view', 'menus.view', 'settings.view', 'login_histories.view', 'media.view', 'media.create', 'media.edit', 'media.delete']);
+        $admin->givePermissionTo(['dashboard.view', 'users.view', 'users.create', 'users.edit', 'roles.view', 'permissions.view', 'menus.view', 'settings.view', 'login_histories.view', 'media.view', 'media.create', 'media.edit', 'media.delete', 'playlists.view', 'playlists.create', 'playlists.edit', 'playlists.delete']);
 
-        $operator->syncPermissions(['dashboard.view', 'media.view', 'media.create']);
+        $operator->givePermissionTo(['dashboard.view', 'media.view', 'media.create', 'playlists.view']);
 
         $user = User::firstOrCreate(
             ['email' => 'admin@cms.test'],
