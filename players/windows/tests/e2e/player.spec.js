@@ -5,12 +5,13 @@ import path from 'node:path';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
 import { manifest, publicId, token } from '../fixtures.js';
+const executablePath = process.env.CMS_TEST_ELECTRON_EXECUTABLE || undefined;
 test('Windows hidden setup, sandbox and selected-display bounds smoke', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'cms-player-e2e-'));
     const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
     let application;
     try {
-        application = await electron.launch({ args: ['.', '--smoke-test', '--test-data-dir=' + directory], cwd: process.cwd(), env });
+        application = await electron.launch({ executablePath, args: ['.', '--smoke-test', '--test-data-dir=' + directory], cwd: process.cwd(), env });
         const page = await application.firstWindow();
         await expect(page.locator('#setup')).toBeVisible();
         await expect(page.locator('h1', { hasText: 'Connect your display' })).toBeVisible();
@@ -54,7 +55,7 @@ test('real Windows safeStorage pairing, image playback, restart persistence and 
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
-    const launch = () => electron.launch({ args: ['.', '--smoke-test', '--allow-localhost-http', '--test-data-dir=' + directory], cwd: process.cwd(), env });
+    const launch = () => electron.launch({ executablePath, args: ['.', '--smoke-test', '--allow-localhost-http', '--test-data-dir=' + directory], cwd: process.cwd(), env });
     let application;
     try {
         application = await launch(); let page = await application.firstWindow();

@@ -197,6 +197,14 @@ test('checkpoint 5 report and XLSX share scope filters precise milliseconds and 
     $filters = ['from' => now()->subDay()->toDateString(), 'to' => now()->addDay()->toDateString(), 'timezone' => 'UTC'];
     $this->get(route('admin.proof-of-play.index', $filters))->assertOk()->assertSee('Completed Plays')->assertDontSee('SECRET OTHER')->assertViewHas('summary', fn ($v) => (int) $v->completed === 1 && (int) $v->played_ms === 1000);
     DB::table('playback_events')->where('company_id', $this->company->id)->update(['names' => json_encode(['device' => '=HYPERLINK("https://example.test")', 'playlist' => 'Playlist', 'page' => 'Page', 'zone' => 'Window', 'media' => '+SUM(1,2)'])]);
+    $template = (array) DB::table('playback_events')->where('company_id', $this->company->id)->first();
+    unset($template['id']);
+    foreach (['interrupted' => 200, 'failed' => 300] as $status => $milliseconds) {
+        DB::table('playback_events')->insert(array_merge($template, ['event_id' => (string) Str::uuid(), 'playback_session_id' => (string) Str::uuid(), 'status' => $status, 'actual_played_ms' => $milliseconds]));
+    }
+    DB::table('playback_events')->insert(array_merge($template, ['event_id' => (string) Str::uuid(), 'playback_session_id' => (string) Str::uuid(), 'device_id' => $this->devices->last()->id]));
+    $filters['device'] = $f['device']->id;
+    $filters['timezone'] = 'Asia/Jakarta';
     $report = app(PlaybackReport::class);
     $path = tempnam(sys_get_temp_dir(), 'proof-xlsx');
     try {
@@ -210,6 +218,23 @@ test('checkpoint 5 report and XLSX share scope filters precise milliseconds and 
         expect($detail)->toContain($f['event']['event_id'])->toContain('1000')->not->toContain('SECRET OTHER')->not->toContain('<f>');
         expect($summary)->toContain('SUM(1,2)')->not->toContain('<f>');
         $zip->close();
+        $reader = new \OpenSpout\Reader\XLSX\Reader;
+        $reader->open($path);
+        $sheets = [];
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $sheets[$sheet->getName()] = [];
+            foreach ($sheet->getRowIterator() as $xlsxRow) $sheets[$sheet->getName()][] = $xlsxRow->toArray();
+        }
+        $reader->close();
+        expect(array_keys($sheets))->toBe(['Summary', 'Detail']);
+        expect($sheets['Summary'][0][3])->toBe('Asia/Jakarta');
+        expect($sheets['Summary'][2][1])->toBe('=HYPERLINK("https://example.test")');
+        expect($sheets['Summary'][2][2])->toBe('Playlist')->and($sheets['Summary'][2][3])->toBe('+SUM(1,2)');
+        expect(array_slice($sheets['Summary'][2], 4, 4))->toEqual([1, 1, 1, 1500]);
+        expect(count($sheets['Detail']))->toBe(4);
+        expect(array_column(array_slice($sheets['Detail'], 1), 13))->toBe(['completed', 'interrupted', 'failed']);
+        expect($sheets['Detail'][1][0])->toBe($f['event']['event_id']);
+        expect($sheets['Detail'][1][8])->toBe(CarbonImmutable::parse($template['start_time_utc'], 'UTC')->setTimezone('Asia/Jakarta')->format('Y-m-d H:i:s.v'));
     } finally {
         @unlink($path);
     }

@@ -1,6 +1,35 @@
 # Fase 1: stabilisasi dan local acceptance
 
-**Status: PARTIAL / PENDING**, 19 November 2026. Acceptance nyata dan installer baru belum memenuhi exit criteria.
+**Status: BLOCKED**, 19 November 2026. Pengguna telah menyetujui database acceptance tertentu; autentikasi dan preflight masih menunggu password lokal. Installer baru belum memenuhi prasyarat build.
+
+## Lanjutan setelah persetujuan database
+
+Pengguna menyetujui secara spesifik MySQL `127.0.0.1:3306`, database `cms_acceptance_test`, user `cms_acceptance_user`, dan fixture sementara. Port dapat dijangkau. Login tanpa password ditolak (SQLSTATE `HY000`, kode MySQL 1045); password tidak tersedia dalam environment agen. Keberadaan schema, hak user, dan isolasi aktual belum dapat diverifikasi. Belum ada migrasi atau seeder yang dijalankan dalam lanjutan ini.
+
+Setelah password dimasukkan melalui prompt lokal, preflight pertama gagal sebelum migrasi dengan hasil umum. Percobaan kedua mencapai pemeriksaan grant dan berhenti dengan `fixture_database_grants_invalid`. Guard lama tidak mengenali escape untuk underscore pada grant MySQL; diperbaiki agar hanya menerima nama literal sesuai `partial_revokes`, dan ditambahkan tes untuk menolak wildcard. Percobaan ketiga tetap menghasilkan `fixture_database_grants_invalid`. Koneksi ke database berhasil, tetapi grant aktual belum diperiksa sehingga belum diketahui apakah hak terlalu luas atau memakai format/role yang belum didukung guard. Tidak ada migrasi maupun fixture yang dijalankan. Lihat [dokumentasi GRANT MySQL](https://dev.mysql.com/doc/refman/8.0/en/grant.html) mengenai escape wildcard database.
+
+Skrip [acceptance-local.ps1](../players/windows/scripts/acceptance-local.ps1) dibuka pada jendela PowerShell interaktif untuk input password tersembunyi. Password hanya berada di memory/environment proses yang menjalankan test; tidak dituliskan ke `.env` atau status. Sebelum migrasi biasa, guard memastikan host dan nama schema yang dituju, user non-root, grant terbatas, dan schema kosong; jika gagal, proses berhenti. Aksi fixture `seed-permissions` membuat hanya delapan permission yang dibutuhkan dalam schema acceptance. Skrip kemudian menjalankan acceptance dan mencatat status tersanitasi di `storage/app/phase1-acceptance-status.json`; ia tidak membuat database/user atau membangun installer. Video test Chromium disimpan sementara di `storage/app/phase1-acceptance-bear.mp4` dan checksum SHA-256 cocok dengan nilai di bawah. Pengujian yang menggunakan database, serta instalasi dan hardware, tetap pending sampai preflight dan acceptance benar-benar selesai.
+
+## Lanjutan pada commit 7089b80
+
+Working tree awal bersih pada `7089b8086bd978cdd0897c3a768d37ad28baf7f2`. Pemeriksaan ulang menyelesaikan pekerjaan non-destruktif berikut:
+
+- Dalam sandbox Codex, ACL `players/windows/node_modules/electron/dist` tidak memberi `ALL APPLICATION PACKAGES`; `icacls` terhadap direktori dependency ditolak `Access is denied`. Salinan khusus test diberi izin `(OI)(CI)(RX)` untuk SID tersebut, termasuk pada `electron.exe`, tetapi masih gagal dengan diagnosis yang sama. Salinan probe telah dihapus. Menjalankan `npm.cmd run test:e2e` di luar sandbox Codex berhasil: **2 smoke test lulus**, termasuk `sandbox=true`, `contextIsolation=true`, pairing, safeStorage, cache/restart dan revocation; satu acceptance opt-in tidak dijalankan. Tidak ada perubahan ACL drive/folder sistem, UAC, antivirus atau sandbox Electron. Pesan `os_crypt` pada percobaan sandbox Codex tidak muncul sebagai kegagalan smoke test di luar sandbox. Playwright juga mendukung `CMS_TEST_ELECTRON_EXECUTABLE` untuk memilih salinan test.
+- Chrome headless memutar fixture MP4 `chromium/chromium:media/test/data/bear.mp4` yang diperoleh melalui GitHub connector; Git blob `476dc2b648491c7df32fabb694e488ea6b8c3aed`, SHA-256 `AA2786362E3D61646390BA23CB0639B6AE9C9F48B58A882A7622D94C8AFE7FE1`. Resolusi 320×180, durasi 1,068 detik; antara sampel waktu 0,208 dan 0,713 detik frame meningkat 10 ke 25 dan checksum piksel berubah. Tidak ada error halaman. Ini bukti decoding Chrome, bukan Electron atau hardware signage. File probe sementara dihapus.
+- Harness kini mensyaratkan `APP_ENV=testing`, MySQL loopback, nama schema eksplisit berakhiran `_acceptance_test`, nama berbeda dari database `.env`, konfigurasi tidak cached dan user bukan root. `SHOW GRANTS` ditolak kecuali USAGE global dan grant pada schema acceptance yang sama. Konfigurasi child PHP dan server ditetapkan dari variabel `CMS_ACCEPTANCE_DB_*`; tidak mengubah `.env`. Guard untuk SQLite dan production telah diuji tanpa koneksi database pengguna. Ini bukan bukti bahwa database pilihan benar-benar private: pengguna tetap harus mengonfirmasi bahwa schema dan server terisolasi.
+- Fixture menggunakan tag acak dan token kepemilikan acak, menolak company atau file dengan nama bertabrakan, memverifikasi pemilik sebelum cleanup, dan membungkus setup database dalam transaksi dengan rollback/cleanup file saat exception. `public/hot` tidak dipindah atau dihapus; jika ada, test berhenti. Screenshot berada di direktori temporer, trace acceptance dimatikan untuk menghindari credential, dan bind server diverifikasi sebelum health check. Forced termination dapat tetap meninggalkan media fixture setelah rollback; jangan membersihkannya tanpa memverifikasi tag dan path.
+- XLSX diuji menggunakan OpenSpout: sheet, nama, angka completed/interrupted/failed, total milidetik, timezone, filter device, isolasi company dan teks menyerupai formula diperiksa dalam test SQLite. Harness acceptance juga membaca workbook hasil download dan membandingkan ringkasan dengan database fixture, tetapi perubahan harness belum dijalankan pada MySQL/Electron sehingga belum terverifikasi end-to-end.
+- Suite PHP terbaru **191/191, 1.196 assertion**; test CMS 51/51 dan Player 41/41; Vite build, Blade compilation, PHP lint dan `git diff --check` berhasil. Uji guard baru 2/2. Installer 2.0.0 lama tetap berasal dari build sebelumnya, tidak dibangun ulang atau diuji upgrade.
+
+File lanjutan: `players/windows/tests/e2e/{player.spec.js,always-on-localhost.spec.js}`, `tests/Browser/{always-on-fixture.php,read-acceptance-xlsx.php}`, `tests/Feature/AlwaysOnPlaybackTest.php`, `tests/Unit/AcceptanceFixtureGuardTest.php`, dan dokumen ini.
+
+### Prasyarat acceptance berikutnya
+
+1. Pengguna menyetujui host `127.0.0.1`, nama schema khusus berakhiran `_acceptance_test`, pembuatan/setup database tersebut dan fixture sementara. Siapkan user MySQL terbatas hanya pada schema itu; jangan gunakan root, database CMS utama, data produksi, atau schema yang digunakan bersama. Tidak ada database atau migrasi yang telah dibuat/dijalankan dalam lanjutan ini.
+2. Dalam proses test saja, tetapkan `CMS_ACCEPTANCE_DB_HOST`, `CMS_ACCEPTANCE_DB_DATABASE`, `CMS_ACCEPTANCE_DB_USERNAME`, `CMS_ACCEPTANCE_DB_PASSWORD`, dan opsional `CMS_ACCEPTANCE_DB_PORT`. Jangan menyimpan password di laporan atau `.env` utama. Perlindungan fixture memeriksa grant efektif; pengaturan role/grant kompleks mungkin ditolak secara fail-closed. Tetapkan juga `CMS_REAL_ACCEPTANCE=1` ketika benar-benar siap.
+3. Sebelum migrasi biasa pada schema yang disetujui, jalankan action fixture `preflight` dengan environment DB dan `APP_ENV=testing` yang sama, konfirmasikan hasil `{"safe":true}`, dan verifikasi nama database serta izin user secara independen. Jangan jalankan `migrate:fresh` atau `db:wipe`. Sediakan permission yang dibutuhkan hanya dalam schema test. Jangan menganggap preflight sebagai pengganti persetujuan pengguna.
+4. Jalankan Electron di luar sandbox Codex bila perlu, dengan sandbox Electron tetap aktif seperti pada smoke test yang lulus. `CMS_TEST_ELECTRON_EXECUTABLE` dapat menunjuk executable salinan test; tidak diperlukan perubahan ACL pada percobaan yang berhasil.
+5. Pastikan `public/hot` tidak ada melalui penghentian normal Vite. Gunakan fixture Chromium dengan SHA-256 di atas; `CMS_ACCEPTANCE_VIDEO_PATH` opsional menunjuk file tersebut jika download tidak tersedia. Lalu jalankan real acceptance dan uji skenario yang belum dicakup (termasuk filter/report lintas company, freeze nyata dan restart) sebelum membangun installer.
 
 ## Baseline dan lingkungan
 
@@ -21,20 +50,20 @@
 | Pemeriksaan | Hasil |
 | --- | --- |
 | PHP Auth/Profile | 25/25, 83 assertion |
-| PHP suite | 189/189, 1.180 assertion, SQLite in-memory |
+| PHP suite | 191/191, 1.196 assertion, SQLite in-memory |
 | JavaScript CMS | 51/51 |
 | Windows Player unit | 41/41; `prepare:shared` dijalankan |
 | Build Vite | Berhasil |
 | PHP lint file PHP diubah; Blade compilation | Berhasil |
 | Composer validate | Valid; warning constraint versi OpenSpout eksak, cache Composer tidak writable |
 | `git diff --check` | Berhasil; peringatan normalisasi CRLF |
-| Electron E2E | 2 gagal saat Electron launch, 1 real acceptance opt-in tidak dijalankan. ACL folder Electron menolak akses token sandbox `ALL APPLICATION PACKAGES`; pesan OS crypt juga muncul. Tidak ada hasil playback yang dapat disimpulkan. |
-| Laravel + Electron acceptance | PENDING: persetujuan penggunaan fixture belum diberikan, target database belum diverifikasi terisolasi, dan Electron belum dapat diluncurkan. |
-| Frame H.264 sebenarnya, playback time, loop, window paralel, restart/offline | PENDING pada browser/Player nyata. Chrome headless dapat dibuka, tetapi percobaan merekam MP4 H.264 sintetis menghasilkan `NotSupportedError` saat dimuat; belum ada bukti decoding frame. Unit test tidak membuktikan decoding hardware. |
+| Electron E2E | 2 smoke test lulus di luar sandbox Codex dengan sandbox Electron aktif; 1 real acceptance opt-in tidak dijalankan. Percobaan di dalam sandbox Codex gagal saat launch karena akses ACL. |
+| Laravel + Electron acceptance | PENDING: target database sudah disetujui, tetapi autentikasi dan isolasi belum diverifikasi. |
+| Frame H.264 sebenarnya, playback time, loop, window paralel, restart/offline | Fixture resmi Chromium terdekode dan bergerak di Chrome headless. PENDING pada Player dengan Laravel nyata; unit test tidak membuktikan decoding hardware. |
 | Assignment multi-device, limit 0/1/3/5/100, PoP, export XLSX | Dicakup sebagian oleh test terisolasi, tetapi rangkaian acceptance nyata dan pemeriksaan isi XLSX masih PENDING. |
 | Installer baru | PENDING: build mensyaratkan regression dan acceptance localhost berhasil. Installer lama `CMS-Signage-Player-2.0.0-x64-Setup.exe`, SHA-256 `BF8D365B9AB8F5B07C844D5F69CF5FD7DDBADCC330E1C6077A6B80F493E08279`, berasal dari build sebelumnya dan tidak mengandung perubahan fase ini. Tidak diklaim signed atau tervalidasi upgrade. |
 
-Bukti ringkas tersanitasi: baseline PHP `tests=188 passed=182 failed=2 errors=4 assertions=1156`; sesudah perubahan `tests=189 passed=189 assertions=1180`. Baseline dan hasil JS/Player di atas berasal dari perintah test aktual. Log Playwright lokal ada di `phase1-e2e.log` (diabaikan Git), termasuk rincian kegagalan launch; jangan membagikan trace mentah tanpa audit. Screenshot acceptance baru tidak tersedia. `npm ci` belum dijalankan agar instalasi dependency yang ada tidak dihapus saat akses jaringan belum tersedia.
+Bukti ringkas tersanitasi: baseline PHP `tests=188 passed=182 failed=2 errors=4 assertions=1156`; sesudah lanjutan `tests=191 passed=191 assertions=1196`. Baseline dan hasil JS/Player di atas berasal dari perintah test aktual. Log Playwright lokal lama ada di `phase1-e2e.log` (diabaikan Git), termasuk rincian kegagalan launch; jangan membagikan trace mentah tanpa audit. Screenshot acceptance baru tidak tersedia. `npm ci` belum dijalankan agar instalasi dependency yang ada tidak dihapus saat akses jaringan belum tersedia.
 
 Reproduksi PHP tanpa mengubah konfigurasi global:
 
@@ -49,9 +78,9 @@ npm.cmd run test:e2e
 
 ## Audit harness acceptance
 
-`always-on-localhost.spec.js` memakai tag acak 12 digit hex, port localhost sementara, direktori userData sementara dan menghentikan hanya proses server yang dibuatnya. Fixture menulis Company, User, Playlist, Page, Zone, media, Device, assignment dan tabel playback; cleanup menghapus data berdasarkan company code bertag serta file di prefix fixture. Ini tidak cukup untuk membuktikan database yang dituju bukan production/shared. Ada risiko tabrakan tag: flag cleanup ditetapkan sebelum setup selesai dan cleanup memilih company berdasarkan code, sehingga tabrakan/gagal setup berpotensi menyasar company yang telah ada. Jangan jalankan terhadap database existing. `public/hot` dipindah sementara; jika file baru muncul selama tes, backup lama tidak otomatis dipulihkan. Kegagalan/terminasi paksa juga memerlukan pemeriksaan manual fixture dan backup miliknya. Harness hanya memeriksa header ZIP XLSX, belum memeriksa nilai sheet, filter, isolasi company, atau teks formula. Download fixture H.264 dari Chromium juga perlu akses jaringan dan validasi decoding. Semua kekurangan ini harus ditangani sebelum acceptance.
+Audit awal menemukan risiko tabrakan tag, cleanup berdasarkan code semata, pemindahan `public/hot`, dan validasi XLSX yang hanya memeriksa header ZIP. Perubahan dan batas baru dijelaskan pada bagian **Lanjutan pada commit 7089b80** di atas. Acceptance tetap tidak boleh diarahkan ke database existing; guard baru belum diuji dengan database MySQL yang disetujui.
 
-Siapkan database test MySQL baru yang benar-benar terisolasi, konfirmasikan host/database dan `APP_ENV`, dan minta persetujuan eksplisit untuk fixture sebelum membuat atau menjalankannya. Jangan menjalankan `migrate:fresh`, `db:wipe`, cleanup massal atau seeder keseluruhan pada database existing. Gunakan perintah migrasi biasa dan seeder permission yang diperlukan hanya pada database test yang telah disetujui. Tinjau dan perbaiki batas kepemilikan cleanup serta pemulihan `public/hot` sebelum menjalankan harness. Perbaiki akses sandbox Electron dengan cara yang disetujui pada lingkungan test, tanpa mematikan sandbox produksi. Setelah semua prasyarat dan persetujuan terpenuhi, jalankan `CMS_REAL_ACCEPTANCE=1` sesuai instruksi proyek, lalu verifikasi isi XLSX dan skenario yang belum dicakup secara terpisah.
+Siapkan database test MySQL baru yang benar-benar terisolasi, konfirmasikan host/database dan `APP_ENV`, dan minta persetujuan eksplisit untuk fixture sebelum membuat atau menjalankannya. Jangan menjalankan `migrate:fresh`, `db:wipe`, cleanup massal atau seeder keseluruhan pada database existing. Gunakan perintah migrasi biasa dan seeder permission yang diperlukan hanya pada database test yang telah disetujui. Setelah semua prasyarat dan persetujuan terpenuhi, jalankan `CMS_REAL_ACCEPTANCE=1` sesuai instruksi proyek, lalu verifikasi isi XLSX dan skenario yang belum dicakup secara terpisah.
 
 ## Panduan manual localhost
 
