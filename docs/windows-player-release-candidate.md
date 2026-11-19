@@ -1,6 +1,22 @@
 # Windows Player — Phase 1.5 release candidate
 
-**Status: BLOCKED** untuk release candidate, 19 November 2026. Akun MySQL acceptance terbukti mempunyai hak global; clean install/upgrade dan soak 24–72 jam belum dibuktikan. Jangan gunakan akun itu terhadap data produksi dan jangan menjalankan acceptance baru dengan bypass sampai grant diperbaiki dan diaudit ulang.
+**Status: BLOCKED** untuk release candidate, 19 November 2026. Audit setelah perubahan administrator hanya menemukan USAGE global dan belum menemukan grant schema acceptance; akses schema ditolak. Clean install/upgrade dan soak 24–72 jam belum dibuktikan. Jangan gunakan akun terhadap data produksi atau menjalankan acceptance dengan bypass.
+
+## Audit setelah perubahan privilege
+
+Setelah pengguna menyatakan privilege telah diperbaiki, audit read-only dicoba dua kali tanpa bypass. Keduanya berhenti sebelum `SHOW GRANTS` karena MySQL mengembalikan **1044** ketika koneksi memilih `cms_acceptance_test`. Hasil ini menunjukkan akses schema ditolak, tetapi belum membuktikan apakah grant global telah dihapus atau mengapa grant schema tidak berlaku. Tidak ada fixture, migrasi, atau acceptance database yang dijalankan pada percobaan ini.
+
+Audit diperluas untuk membaca identitas dan klasifikasi grant tanpa memilih database terlebih dahulu, lalu mencoba memilih hanya schema acceptance; error yang disimpan hanya kode driver. Audit tambahan **lulus autentikasi dan identitas akun/port**, tetapi hanya menemukan **USAGE pada `*.*`** dan tidak menemukan grant pada schema acceptance. Pemilihan `cms_acceptance_test` tetap ditolak dengan kode **1044**, sehingga preflight tanpa bypass **FAIL**. `partial_revokes` dilaporkan OFF. Tidak ada privilege global selain USAGE yang terlihat pada hasil audit ini, tetapi akun belum mempunyai akses schema yang diperlukan. Tidak ada fixture, migrasi, atau acceptance database yang dijalankan.
+
+Administrator perlu memberikan grant yang diperlukan secara literal pada schema `cms_acceptance_test` kepada akun yang benar, tanpa privilege global atau role luas. Ketika `partial_revokes` OFF, underscore dalam grant tingkat schema MySQL dapat berfungsi sebagai wildcard dan harus diperlakukan secara literal. Setelah grant selesai, audit dan preflight tanpa bypass harus diulang. Prosedur VM clean install/uninstall/retensi/upgrade dan tool soak 24–72 jam di bawah tetap siap, tetapi belum dijalankan atau dinyatakan lulus.
+
+## Audit ulang setelah permintaan pembatasan grant
+
+Audit read-only `acceptance-grant-audit.ps1` dijalankan kembali tanpa bypass pada 19 November 2026. Koneksi berhasil dan `DATABASE()`, `CURRENT_USER()` serta port cocok dengan konfigurasi acceptance. Hasilnya **FAIL**: `SHOW GRANTS` masih menunjukkan privilege pada `*.*`, termasuk `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`, `FILE`, `INDEX` dan `ALTER`. Tidak ada grant role yang muncul pada hasil audit yang diklasifikasikan, tetapi privilege global tersebut sudah cukup untuk menolak akun. `partial_revokes` dilaporkan OFF.
+
+Preflight tanpa `ACCEPTANCE_SKIP_GRANT_INSPECTION` juga **FAIL**, sehingga regresi dan acceptance yang menggunakan database khusus tidak dijalankan pada percobaan ini. Tidak ada grant, data database utama, credential operator atau data operator yang diubah. Hasil audit tersanitasi tersedia lokal di `storage/app/phase15-grant-audit.json`; password tidak disimpan dalam laporan.
+
+Installer 2.0.0 Fase 1 masih tersedia dan hash SHA-256-nya cocok dengan nilai di bawah. Prosedur VM untuk clean install, uninstall, retensi dan upgrade serta perintah soak 24–72 jam tetap disiapkan di bagian berikut; tidak ada pengujian tersebut yang dijalankan pada percobaan ini. Administrator perlu menghapus privilege global akun acceptance dan memberikan hanya grant literal schema `cms_acceptance_test`, lalu audit dan preflight tanpa bypass harus diulang sebelum acceptance database dilanjutkan.
 
 ## Baseline dan hasil nyata
 
