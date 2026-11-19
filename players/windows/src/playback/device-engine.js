@@ -1,4 +1,14 @@
 import { orderedManifest, itemDuration } from './vendor/studio-playback.js';
+// A video can report buffered data while its decoder has stopped advancing.
+export function videoReady(entry, now=performance.now()) {
+    const node=entry?.node;
+    if(entry?.failed)return 'error';
+    if(!node || node.readyState<3 || node.paused || node.seeking){if(entry)entry.progress=null;return false;}
+    const previous=entry.progress, elapsed=previous ? now-previous.at : 0;
+    const stalled=previous && elapsed>=0 && elapsed<=1000 && Math.abs(node.currentTime-previous.time)<0.001 ? previous.stalled+elapsed : 0;
+    entry.progress={at:now,time:node.currentTime,stalled};
+    return stalled>=8000 ? 'error' : true;
+}
 // Device-only sequencing: shared Preview keeps its independent, quota-free clock.
 export class DevicePlayback {
     constructor(manifest,{bridge,renderer,onChange=()=>{},ready=()=>false,now=()=>performance.now(),raf=fn=>requestAnimationFrame(fn),cancel=id=>cancelAnimationFrame(id),context={}}={}){
@@ -18,7 +28,7 @@ export class DevicePlayback {
             }continue;}
             const result=await this.bridge.begin({itemId:item.id,pageId:page.id,zoneId:zone.id,durationMs:Math.round(duration*1000)});
             if(!result.ok)throw Error(result.error);if(!result.value){track.exhausted.add(item.id);continue;}
-            Object.assign(track,{item,session:result.value,played:0,expected:Math.round(duration*1000),checkpoint:0,wasReady:false,cycle:track.cycle+1});return;
+            Object.assign(track,{item,session:result.value,played:0,expected:Math.round(duration*1000),checkpoint:0,wasReady:false,unready:0,cycle:track.cycle+1});return;
         }
         track.item=null;
     }
@@ -29,8 +39,9 @@ export class DevicePlayback {
         for(const zone of page.zones.filter(z=>z.visible)){
             let track=this.tracks.get(zone.id);if(!track){track={index:0,item:null,session:null,played:0,cycle:0,failed:new Set(),exhausted:new Set()};this.tracks.set(zone.id,track);}
             if(track.item){
-                const info=this.ready(zone.id,track.item);const failed=info==='error' || this.metadata[track.item.src]?.status==='error';
-                if(failed){track.failed.add(track.item.id);await this.finish(track,'failed','decode_error');track.item=null;}
+                const info=this.ready(zone.id,track.item);track.unready=info===true?0:track.unready+dt;
+                const timedOut=track.unready>=8000,failed=info==='error' || this.metadata[track.item.src]?.status==='error' || timedOut;
+                if(failed){track.failed.add(track.item.id);await this.finish(track,'failed',timedOut?'playback_timeout':'decode_error');track.item=null;}
                 else{
                     if(info===true && track.wasReady)track.played+=Math.min(dt,remaining,Math.max(0,track.expected-track.played));track.wasReady=info===true;
                     if(track.played>=track.expected){await this.finish(track,'completed','duration_complete');track.item=null;}

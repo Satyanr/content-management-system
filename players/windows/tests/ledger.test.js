@@ -27,7 +27,7 @@ test('checkpoint 3 simultaneous sessions cannot reserve more than max plays and 
  await ledger.begin('b',one,context);await assert.rejects(ledger.begin('c',one,context),/playback_queue_full/);
 });
 
-import { DevicePlayback } from '../src/playback/device-engine.js';
+import { DevicePlayback, videoReady } from '../src/playback/device-engine.js';
 test('device sequencing counts two concurrent Windows once and waits for durable completion before skip',async t=>{
  const f=await fixture(t),ledger=new PlaybackLedger(f.root,f.options);await ledger.init();
  const one={...item,maxPlays:1,type:'image',src:'one',available:true,duration:1};
@@ -79,4 +79,20 @@ test('unknown and prototype-shaped session IDs never create events or counters',
 test('large pending snapshot compacts by new journal growth rather than rewriting every checkpoint',async t=>{
  const f=await fixture(t),ledger=new PlaybackLedger(f.root,f.options);await ledger.init();ledger.state.pending.large={event_id:'large',padding:'x'.repeat(9*1024*1024)};
  await ledger.append({type:'tick',id:'none',data:{padding:'x'.repeat(8*1024*1024)}});const size=(await readFile(ledger.file)).length;await ledger.append({type:'seed',counts:{}});assert.ok((await readFile(ledger.file)).length>size);const reopened=new PlaybackLedger(f.root,f.options);await reopened.init();assert.ok(reopened.compactAt>size+1024*1024);
+});
+
+test('unresponsive video is failed and the next item can play without consuming its quota',async()=>{
+ let now=0, id=0;const events=[];
+ const video={id:1,type:'video',src:'broken',available:true,duration:30}, image={id:2,type:'image',src:'next',available:true,duration:10};
+ const bridge={begin:async()=>({ok:true,value:++id}),finish:async event=>{events.push(event);return {ok:true};},checkpoint:async()=>({ok:true})};
+ const engine=new DevicePlayback({pages:[{id:1,duration:60,zones:[{id:1,visible:true,z_index:0,items:[video,image]}]}]},{bridge,ready:()=>false,now:()=>now,raf:()=>1,cancel(){}});
+ engine.play();await engine.step();for(now=1000;now<=8000;now+=1000)await engine.step();
+ assert.equal(events[0].status,'failed');assert.equal(events[0].reason,'playback_timeout');assert.equal(events[0].actual_played_ms,0);assert.equal(engine.tracks.get(1).item.id,2);await engine.destroy();
+});
+
+test('video readiness detects a frozen decoder and resets after progress or a long renderer gap',()=>{
+ const entry={node:{readyState:4,paused:false,seeking:false,currentTime:1}};
+ for(let t=0;t<8000;t+=1000)assert.equal(videoReady(entry,t),true);
+ assert.equal(videoReady(entry,8000),'error');entry.node.currentTime=2;assert.equal(videoReady(entry,9000),true);
+ assert.equal(videoReady(entry,30000),true);entry.node.seeking=true;assert.equal(videoReady(entry,31000),false);entry.node.seeking=false;assert.equal(videoReady(entry,32000),true);
 });

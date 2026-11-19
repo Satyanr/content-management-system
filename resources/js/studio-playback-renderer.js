@@ -35,8 +35,8 @@ export function mediaErrorMessage(code) {
 
 // Owns only preview DOM. No editor node, source or currentTime is reused.
 export class PlaybackRenderer {
-    constructor(container,{onError=()=>{},onBlocked=()=>{},onSeeking=()=>{},onDiagnostic=()=>{},createElement=tag=>document.createElement(tag),timeout=8000}={}) {
-        Object.assign(this,{container,onError,onBlocked,onSeeking,onDiagnostic,createElement,timeout});this.entries=new Map();this.seekingEntries=new Set();this.pageId=null;this.dead=false;
+    constructor(container,{onError=()=>{},onBlocked=()=>{},onSeeking=()=>{},onDiagnostic=()=>{},createElement=tag=>document.createElement(tag),timeout=8000,restartOnCycle=false}={}) {
+        Object.assign(this,{container,onError,onBlocked,onSeeking,onDiagnostic,createElement,timeout,restartOnCycle});this.entries=new Map();this.seekingEntries=new Set();this.pageId=null;this.dead=false;
     }
     render(snapshot,{width,height,muted=true,volume=1,audioVersion=0}={}) {
         if(this.dead)return;
@@ -47,7 +47,7 @@ export class PlaybackRenderer {
         for(const active of snapshot.windows) {
             const zone=active.zone;keep.add(zone.id);
             let entry=this.entries.get(zone.id);
-            const key=active.item?.id ?? active.state;
+            const key=active.item?.type==='video' && this.restartOnCycle ? `${active.item.id}:${active.cycle}` : active.item?.id ?? active.state;
             if(!entry || entry.key!==key){if(entry)this.release(entry);entry=this.create(active,key);this.entries.set(zone.id,entry);}
             Object.assign(entry.box.style,{position:'absolute',left:100*zone.x/width+'%',top:100*zone.y/height+'%',width:100*zone.width/width+'%',height:100*zone.height/height+'%',zIndex:zone.z_index,overflow:'hidden'});
             entry.active=active;

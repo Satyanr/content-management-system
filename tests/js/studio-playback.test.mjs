@@ -287,3 +287,13 @@ test('Studio warns when manual or resolved Auto item exceeds its Page without in
  const ui={...studioTimeline(),metadata:{},playbackManifest:{pages:[{duration:2,zones:[{items:[{id:99,type:'video',src:'test',duration:null,knownDuration:null,available:true}]}]}]}};
  assert.equal(ui.fileExceedsPage(99),false);ui.metadata.test={status:'ready',duration:3};assert.equal(ui.fileExceedsPage(99),true);ui.metadata.test={status:'error'};assert.equal(ui.fileExceedsPage(99),false);ui.playbackManifest.pages[0].zones[0].items[0].duration=4;assert.equal(ui.fileExceedsPage(99),true);
 });
+
+test('device renderer recreates a repeated item for each playback cycle',()=>{
+ const container=new Node(), nodes=[];
+ const renderer=new PlaybackRenderer(container,{restartOnCycle:true,createElement:tag=>{const n=new Node(tag);nodes.push(n);return n;}});
+ const active={zone:zone(1,[]),item:video(1,4,4),state:'ready',localTime:0,cycle:1};
+ const snapshot={page:{id:1},state:'Playing',seekVersion:0,windows:[active]};
+ renderer.render(snapshot,{width:1920,height:1080});const first=renderer.entries.get(1).video;
+ renderer.render({...snapshot,windows:[{...active,cycle:2}]},{width:1920,height:1080});
+ assert.notEqual(renderer.entries.get(1).video,first);assert.equal(first.src,undefined);renderer.destroy();
+});

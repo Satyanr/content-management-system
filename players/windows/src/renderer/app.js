@@ -1,4 +1,4 @@
-import { DevicePlayback } from '/playback/device-engine.js';
+import { DevicePlayback, videoReady } from '/playback/device-engine.js';
 import { PlaybackEngine } from '/playback/vendor/studio-playback.js';
 import { PlaybackRenderer } from '/playback/vendor/studio-playback-renderer.js';
 import { PlayerMetadataQueue } from '/playback/metadata.js';
@@ -19,9 +19,9 @@ async function play(next) {
     $('idle-title').textContent = ({ idle: 'Belum ada konten', playing:'Memutar Playlist', expired: 'Offline schedule expired', no_schedule: 'No scheduled content', no_package: 'Belum ada konten', clock_unavailable: 'Waiting for server time', reactivation_required: 'Device activation required' })[next.state] ?? 'Ready to connect';
     if (!layout) {if(next.schemaVersion===2)void reportApplied(next);return;}
     scale();
-    renderer = new PlaybackRenderer($('canvas'), { onError: src => engine?.setMetadata(src, { status: 'error' }), onBlocked: () => { $('connection').textContent = 'AUDIO BLOCKED — open settings and toggle mute'; } });
+    renderer = new PlaybackRenderer($('canvas'), { restartOnCycle: next.schemaVersion===2, onError: src => engine?.setMetadata(src, { status: 'error' }), onBlocked: () => { $('connection').textContent = 'AUDIO BLOCKED — open settings and toggle mute'; } });
     const Engine=next.schemaVersion===2 ? DevicePlayback : PlaybackEngine;
-    engine = new Engine(layout, {bridge:window.player,ready:zone=>{const entry=renderer?.entries.get(zone),node=entry?.node;return entry?.failed ? 'error' : !node ? false : node.tagName==='VIDEO' ? node.readyState>=3 && !node.paused && !node.seeking : node.complete && node.naturalWidth>0;},onChange: snapshot => {renderer?.render(snapshot, { width: layout.width, height: layout.height, muted: state.settings.muted, volume: state.settings.volume, audioVersion });if(next.schemaVersion===2 && reportedKey!==key+'/'+latestPlayback.revision && (snapshot.quotaEmpty || snapshot.windows.some(w=>{const e=renderer?.entries.get(w.zone.id),n=e?.node;return !e?.failed && (n?.tagName==='VIDEO'?n.readyState>=3&&!n.paused:n?.complete&&n?.naturalWidth>0);}))){void reportApplied(latestPlayback);}} });
+    engine = new Engine(layout, {bridge:window.player,ready:zone=>{const entry=renderer?.entries.get(zone),node=entry?.node;return entry?.failed ? 'error' : !node ? false : node.tagName==='VIDEO' ? videoReady(entry) : node.complete && node.naturalWidth>0;},onChange: snapshot => {renderer?.render(snapshot, { width: layout.width, height: layout.height, muted: state.settings.muted, volume: state.settings.volume, audioVersion });if(next.schemaVersion===2 && reportedKey!==key+'/'+latestPlayback.revision && (snapshot.quotaEmpty || snapshot.windows.some(w=>{const e=renderer?.entries.get(w.zone.id),n=e?.node;return !e?.failed && (n?.tagName==='VIDEO'?n.readyState>=3&&!n.paused:n?.complete&&n?.naturalWidth>0);}))){void reportApplied(latestPlayback);}} });
     pool = new PlayerMetadataQueue({ onResult: (src, info) => engine?.setMetadata(src, info) });
     pool.load(engine.manifest);
     if (next.schemaVersion!==2 && engine.manifest.totalDuration) engine.seek(Math.max(0, (next.utc - Date.parse(next.startUtc)) / 1000) % engine.manifest.totalDuration);
