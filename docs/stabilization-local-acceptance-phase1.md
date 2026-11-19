@@ -1,14 +1,24 @@
 # Fase 1: stabilisasi dan local acceptance
 
-**Status: BLOCKED**, 19 November 2026. Pengguna telah menyetujui database acceptance tertentu; autentikasi dan preflight masih menunggu password lokal. Installer baru belum memenuhi prasyarat build.
+**Status: PARTIAL**, 19 November 2026. Preflight, acceptance Laravel–Electron, regresi dan build installer lulus. Freeze decoder nyata dan beberapa kombinasi laporan belum diuji end-to-end; instalasi/upgrade pada Windows bersih juga belum diuji.
+
+## Opsi bypass inspeksi grant
+
+Atas instruksi pengguna, `ACCEPTANCE_SKIP_GRANT_INSPECTION=1` hanya melewati pembacaan dan parsing `SHOW GRANTS`; pemeriksaan lain tetap wajib. Guard memerlukan environment lokal/testing, allowlist eksplisit `CMS_ACCEPTANCE_DISPOSABLE_DATABASES`, schema berbeda dari `.env` utama, MySQL loopback, user non-root, serta hasil `DATABASE()`, `CURRENT_USER()` dan port server yang sesuai konfigurasi acceptance. Konfigurasi utama production/staging, database URL/socket yang tidak aman, mismatch identitas, dan schema di luar allowlist ditolak. Ketika bypass berhasil, Laravel menulis peringatan `Acceptance grant inspection bypassed` beserta nama database dan user tanpa password. Mode normal tetap memeriksa grant. Opsi skrip PowerShell `-SkipGrantInspection` mengaktifkan bypass secara eksplisit; tanpa opsi itu inspeksi grant tetap aktif.
+
+Tes guard positif dan negatif lulus 16/16 (37 assertion). Preflight nyata **lulus** untuk `cms_acceptance_test` / `cms_acceptance_user`; log `testing.WARNING` mengonfirmasi bypass. Migrasi normal dan permission fixture telah dijalankan pada schema acceptance; tidak ada reset atau wipe. Pada percobaan pertama, skrip PowerShell salah menangkap peringatan Node sebagai exception walaupun Playwright mencatat status passed. Setelah penanganan peringatan diperbaiki, acceptance nyata dijalankan ulang dan **lulus** dengan ringkasan bukti Laravel dan Electron. Schema yang sudah memiliki seluruh migrasi dan permission dapat digunakan kembali tanpa migrasi ulang; schema parsial ditolak. Karena `SHOW GRANTS` dilewati, bypass **tidak membuktikan user hanya memiliki akses ke schema acceptance**; isolasi hak akun harus dikonfirmasi secara terpisah. Tidak ada perubahan konfigurasi atau data production.
+
+Regresi akhir: PHP 205/205 (1.227 assertion), JS CMS 51/51, Player 41/41. Smoke Electron 2/2 lulus di luar sandbox Codex dengan sandbox Electron aktif; acceptance Laravel–Electron terpisah 1/1 lulus. Acceptance memeriksa frame dan waktu video meningkat, gambar paralel, restart offline, counter 3/5, upload tanpa duplikasi, applied state dan sheet/angka XLSX terhadap data fixture. Test terisolasi mencakup freeze dan skenario 50/100; freeze decoder fisik dan semua kombinasi filter/report belum dibuktikan oleh acceptance nyata.
+
+Installer baru: `players/windows/dist/phase1-acceptance/CMS-Signage-Player-2.0.0-x64-Setup.exe`, **121.511.406 byte**, SHA-256 `5A9A5F8947200828E72841F747FD25616B5163A34CB7FECFFC2E1756F041A45D`. Build tidak ditandatangani (`NotSigned`) dan tidak dipasang otomatis. Metadata executable menyatakan CMS Signage Player 2.0.0; DevicePlayback, renderer, shared renderer, schema v2, ledger dan cache dalam ASAR cocok byte-for-byte dengan source. Konfigurasi `deleteAppDataOnUninstall=false` dan pembatasan HTTP localhost terhadap build unpackaged dipertahankan; upgrade dan retensi data belum diuji pada Windows bersih. Installer lama disimpan terpisah.
 
 ## Lanjutan setelah persetujuan database
 
-Pengguna menyetujui secara spesifik MySQL `127.0.0.1:3306`, database `cms_acceptance_test`, user `cms_acceptance_user`, dan fixture sementara. Port dapat dijangkau. Login tanpa password ditolak (SQLSTATE `HY000`, kode MySQL 1045); password tidak tersedia dalam environment agen. Keberadaan schema, hak user, dan isolasi aktual belum dapat diverifikasi. Belum ada migrasi atau seeder yang dijalankan dalam lanjutan ini.
+Pengguna menyetujui secara spesifik MySQL `127.0.0.1:3306`, database `cms_acceptance_test`, user `cms_acceptance_user`, dan fixture sementara. Login tanpa password ditolak (SQLSTATE `HY000`, kode MySQL 1045); password kemudian dimasukkan melalui prompt lokal. Schema dan identitas koneksi terverifikasi; cakupan grant user belum diverifikasi karena bypass yang diminta.
 
-Setelah password dimasukkan melalui prompt lokal, preflight pertama gagal sebelum migrasi dengan hasil umum. Percobaan kedua mencapai pemeriksaan grant dan berhenti dengan `fixture_database_grants_invalid`. Guard lama tidak mengenali escape untuk underscore pada grant MySQL; diperbaiki agar hanya menerima nama literal sesuai `partial_revokes`, dan ditambahkan tes untuk menolak wildcard. Percobaan ketiga tetap menghasilkan `fixture_database_grants_invalid`. Koneksi ke database berhasil, tetapi grant aktual belum diperiksa sehingga belum diketahui apakah hak terlalu luas atau memakai format/role yang belum didukung guard. Tidak ada migrasi maupun fixture yang dijalankan. Lihat [dokumentasi GRANT MySQL](https://dev.mysql.com/doc/refman/8.0/en/grant.html) mengenai escape wildcard database.
+Pada tiga percobaan awal, preflight berhenti sebelum migrasi, dua di antaranya dengan `fixture_database_grants_invalid`. Guard lama tidak mengenali escape untuk underscore pada grant MySQL; diperbaiki agar hanya menerima nama literal sesuai `partial_revokes`, dan ditambahkan tes untuk menolak wildcard. Grant aktual tetap belum diperiksa sehingga belum diketahui apakah hak terlalu luas atau memakai format/role yang belum didukung guard. Lihat [dokumentasi GRANT MySQL](https://dev.mysql.com/doc/refman/8.0/en/grant.html) mengenai escape wildcard database. Percobaan berikutnya menggunakan bypass atas instruksi pengguna dan hasilnya tercatat di atas.
 
-Skrip [acceptance-local.ps1](../players/windows/scripts/acceptance-local.ps1) dibuka pada jendela PowerShell interaktif untuk input password tersembunyi. Password hanya berada di memory/environment proses yang menjalankan test; tidak dituliskan ke `.env` atau status. Sebelum migrasi biasa, guard memastikan host dan nama schema yang dituju, user non-root, grant terbatas, dan schema kosong; jika gagal, proses berhenti. Aksi fixture `seed-permissions` membuat hanya delapan permission yang dibutuhkan dalam schema acceptance. Skrip kemudian menjalankan acceptance dan mencatat status tersanitasi di `storage/app/phase1-acceptance-status.json`; ia tidak membuat database/user atau membangun installer. Video test Chromium disimpan sementara di `storage/app/phase1-acceptance-bear.mp4` dan checksum SHA-256 cocok dengan nilai di bawah. Pengujian yang menggunakan database, serta instalasi dan hardware, tetap pending sampai preflight dan acceptance benar-benar selesai.
+Skrip [acceptance-local.ps1](../players/windows/scripts/acceptance-local.ps1) dibuka pada jendela PowerShell interaktif untuk input password tersembunyi. Password hanya berada di memory/environment proses yang menjalankan test; tidak dituliskan ke `.env` atau status. Sebelum migrasi biasa, guard memastikan host, nama dan identitas schema yang dituju, user non-root, allowlist, dan schema kosong; jika gagal, proses berhenti. Inspeksi grant dilewati hanya ketika diminta dengan opsi bypass. Aksi fixture `seed-permissions` membuat hanya delapan permission yang dibutuhkan dalam schema acceptance. Skrip menjalankan acceptance dan mencatat status tersanitasi di `storage/app/phase1-acceptance-status.json`; ia tidak membuat database/user atau membangun installer. Video test Chromium disimpan sementara di `storage/app/phase1-acceptance-bear.mp4` dan checksum SHA-256 cocok dengan nilai di bawah.
 
 ## Lanjutan pada commit 7089b80
 
@@ -50,20 +60,20 @@ File lanjutan: `players/windows/tests/e2e/{player.spec.js,always-on-localhost.sp
 | Pemeriksaan | Hasil |
 | --- | --- |
 | PHP Auth/Profile | 25/25, 83 assertion |
-| PHP suite | 191/191, 1.196 assertion, SQLite in-memory |
+| PHP suite | 205/205, 1.227 assertion, SQLite in-memory |
 | JavaScript CMS | 51/51 |
 | Windows Player unit | 41/41; `prepare:shared` dijalankan |
 | Build Vite | Berhasil |
 | PHP lint file PHP diubah; Blade compilation | Berhasil |
 | Composer validate | Valid; warning constraint versi OpenSpout eksak, cache Composer tidak writable |
 | `git diff --check` | Berhasil; peringatan normalisasi CRLF |
-| Electron E2E | 2 smoke test lulus di luar sandbox Codex dengan sandbox Electron aktif; 1 real acceptance opt-in tidak dijalankan. Percobaan di dalam sandbox Codex gagal saat launch karena akses ACL. |
-| Laravel + Electron acceptance | PENDING: target database sudah disetujui, tetapi autentikasi dan isolasi belum diverifikasi. |
-| Frame H.264 sebenarnya, playback time, loop, window paralel, restart/offline | Fixture resmi Chromium terdekode dan bergerak di Chrome headless. PENDING pada Player dengan Laravel nyata; unit test tidak membuktikan decoding hardware. |
-| Assignment multi-device, limit 0/1/3/5/100, PoP, export XLSX | Dicakup sebagian oleh test terisolasi, tetapi rangkaian acceptance nyata dan pemeriksaan isi XLSX masih PENDING. |
-| Installer baru | PENDING: build mensyaratkan regression dan acceptance localhost berhasil. Installer lama `CMS-Signage-Player-2.0.0-x64-Setup.exe`, SHA-256 `BF8D365B9AB8F5B07C844D5F69CF5FD7DDBADCC330E1C6077A6B80F493E08279`, berasal dari build sebelumnya dan tidak mengandung perubahan fase ini. Tidak diklaim signed atau tervalidasi upgrade. |
+| Electron E2E | 2 smoke test lulus di luar sandbox Codex dengan sandbox Electron aktif; real acceptance opt-in lulus pada run terpisah. Percobaan di dalam sandbox Codex gagal saat launch karena akses ACL. |
+| Laravel + Electron acceptance | Lulus dengan database acceptance yang disetujui; grant user tidak diinspeksi karena bypass yang diminta. |
+| Frame H.264, playback time, window paralel, restart/offline | H.264 dan gambar tampil di Electron; waktu dan jumlah frame meningkat, restart offline dan kuota 3/5 lulus. Hardware dan freeze decoder nyata belum diuji. |
+| Assignment multi-device, limit 0/1/3/5/100, PoP, export XLSX | Test terisolasi mencakup assignment/kuota, termasuk 50/100; acceptance nyata menguji 3/5, upload/reconnect tanpa duplikasi dan membandingkan nilai workbook dengan database. Tidak semua kombinasi diuji dalam acceptance nyata. |
+| Installer baru | Build dan pemeriksaan isi ASAR lulus; checksum dan batas instalasi di atas. Installer lama dengan SHA-256 `BF8D365B9AB8F5B07C844D5F69CF5FD7DDBADCC330E1C6077A6B80F493E08279` disimpan terpisah. |
 
-Bukti ringkas tersanitasi: baseline PHP `tests=188 passed=182 failed=2 errors=4 assertions=1156`; sesudah lanjutan `tests=191 passed=191 assertions=1196`. Baseline dan hasil JS/Player di atas berasal dari perintah test aktual. Log Playwright lokal lama ada di `phase1-e2e.log` (diabaikan Git), termasuk rincian kegagalan launch; jangan membagikan trace mentah tanpa audit. Screenshot acceptance baru tidak tersedia. `npm ci` belum dijalankan agar instalasi dependency yang ada tidak dihapus saat akses jaringan belum tersedia.
+Bukti ringkas tersanitasi: baseline PHP `tests=188 passed=182 failed=2 errors=4 assertions=1156`; hasil akhir `tests=205 passed=205 assertions=1227`. Baseline dan hasil JS/Player di atas berasal dari perintah test aktual. Log Playwright lokal lama ada di `phase1-e2e.log` (diabaikan Git), termasuk rincian kegagalan launch; jangan membagikan trace mentah tanpa audit. Screenshot acceptance disimpan sementara dan dibersihkan oleh harness. `npm ci` belum dijalankan agar instalasi dependency yang ada tidak dihapus saat akses jaringan belum tersedia.
 
 Reproduksi PHP tanpa mengubah konfigurasi global:
 
@@ -78,7 +88,7 @@ npm.cmd run test:e2e
 
 ## Audit harness acceptance
 
-Audit awal menemukan risiko tabrakan tag, cleanup berdasarkan code semata, pemindahan `public/hot`, dan validasi XLSX yang hanya memeriksa header ZIP. Perubahan dan batas baru dijelaskan pada bagian **Lanjutan pada commit 7089b80** di atas. Acceptance tetap tidak boleh diarahkan ke database existing; guard baru belum diuji dengan database MySQL yang disetujui.
+Audit awal menemukan risiko tabrakan tag, cleanup berdasarkan code semata, pemindahan `public/hot`, dan validasi XLSX yang hanya memeriksa header ZIP. Perubahan dan batas baru dijelaskan pada bagian **Lanjutan pada commit 7089b80** di atas. Guard baru dan acceptance telah dijalankan pada database MySQL yang disetujui; hak grant akun belum diaudit karena bypass.
 
 Siapkan database test MySQL baru yang benar-benar terisolasi, konfirmasikan host/database dan `APP_ENV`, dan minta persetujuan eksplisit untuk fixture sebelum membuat atau menjalankannya. Jangan menjalankan `migrate:fresh`, `db:wipe`, cleanup massal atau seeder keseluruhan pada database existing. Gunakan perintah migrasi biasa dan seeder permission yang diperlukan hanya pada database test yang telah disetujui. Setelah semua prasyarat dan persetujuan terpenuhi, jalankan `CMS_REAL_ACCEPTANCE=1` sesuai instruksi proyek, lalu verifikasi isi XLSX dan skenario yang belum dicakup secara terpisah.
 

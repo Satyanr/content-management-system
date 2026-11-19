@@ -33,8 +33,16 @@ if (config('database.default') !== 'mysql' || ! is_string($approvedDatabase)
     || ! empty($configured['url'])) {
     throw new RuntimeException('fixture_database_not_isolated');
 }
-// The test identity may have privileges only on the dedicated schema; roles and
-// wildcard grants are rejected because their effective scope is not obvious here.
+$skipGrantInspection = acceptanceGrantInspectionBypassed(
+    getenv('ACCEPTANCE_SKIP_GRANT_INSPECTION'), $app->environment(), $configured, $mainEnv,
+    ['database' => $approvedDatabase, 'username' => getenv('CMS_ACCEPTANCE_DB_USERNAME'),
+        'host' => getenv('CMS_ACCEPTANCE_DB_HOST'), 'port' => getenv('CMS_ACCEPTANCE_DB_PORT'),
+        'allowlist' => getenv('CMS_ACCEPTANCE_DISPOSABLE_DATABASES') ?: ''],
+    fn () => DB::selectOne('SELECT DATABASE() AS database_name, CURRENT_USER() AS account, @@port AS server_port'),
+    fn ($database, $user) => \Illuminate\Support\Facades\Log::warning('Acceptance grant inspection bypassed', ['database' => $database, 'database_user' => $user])
+);
+// The default remains fail-closed for broad grants, roles and wildcard schemas.
+if (! $skipGrantInspection) {
 $schemaGrant = false;
 $partialRevokes = DB::selectOne("SHOW VARIABLES LIKE 'partial_revokes'");
 $partialRevokesEnabled = strtoupper((string) ($partialRevokes->Value ?? 'OFF')) === 'ON';
@@ -47,6 +55,7 @@ foreach (DB::select('SHOW GRANTS FOR CURRENT_USER') as $grantRow) {
     $schemaGrant = true;
 }
 if (! $schemaGrant) throw new RuntimeException('fixture_database_grants_invalid');
+}
 $input = json_decode(stream_get_contents(STDIN), true, flags: JSON_THROW_ON_ERROR);
 $tag = $input['tag'] ?? '';
 if (! is_string($tag) || ! preg_match('/^[a-f0-9]{12}$/D', $tag) || ! is_string($input['owner'] ?? null) || ! preg_match('/^[a-f0-9]{64}$/D', $input['owner'])) {
@@ -62,7 +71,15 @@ $ownedCompany = static function () use ($code, $ownerName) {
 };
 if ($input['action'] === 'preflight') {
     $tables = DB::select('SHOW FULL TABLES');
-    echo json_encode(['safe' => true, 'table_count' => count($tables)]);
+    $ready = false;
+    if (count($tables) > 0 && \Illuminate\Support\Facades\Schema::hasTable('migrations') && \Illuminate\Support\Facades\Schema::hasTable('permissions')) {
+        $expected = array_map(fn ($file) => basename($file, '.php'), glob(database_path('migrations/*.php')));
+        $applied = DB::table('migrations')->pluck('migration')->all();
+        sort($expected); sort($applied);
+        $permissions = ['dashboard.view', 'playlists.view', 'devices.view', 'devices.assign', 'playback.view', 'playback.export', 'playback.reset', 'media.view'];
+        $ready = $expected === $applied && DB::table('permissions')->where('guard_name', 'web')->whereIn('name', $permissions)->distinct()->count('name') === count($permissions);
+    }
+    echo json_encode(['safe' => true, 'table_count' => count($tables), 'schema_ready' => $ready]);
     exit;
 }
 if ($input['action'] === 'seed-permissions') {

@@ -1,4 +1,4 @@
-param([string]$StatusPath)
+param([string]$StatusPath, [switch]$SkipGrantInspection)
 
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
@@ -17,7 +17,7 @@ function Invoke-Fixture([string]$action) {
         $output = $payload | & php (Join-Path $repo 'tests/Browser/always-on-fixture.php') 2>&1 | Out-String
     } finally { $ErrorActionPreference = $previousPreference }
     try { return $output.Trim() | ConvertFrom-Json } catch {
-        $code = if ($output -match 'fixture_(environment_invalid|database_not_isolated|database_grants_invalid|tag_invalid)') { $Matches[0] }
+        $code = if ($output -match 'fixture_(environment_invalid|database_not_isolated|database_identity_invalid|database_grants_invalid|tag_invalid)') { $Matches[0] }
         elseif ($output -match '\b(1045|1049|2002|2003|2005)\b') { 'mysql_' + $Matches[1] }
         else { 'unclassified' }
         throw ('Database preflight or permission seed failed: ' + $code)
@@ -37,6 +37,9 @@ try {
     $env:CMS_ACCEPTANCE_DB_PORT = '3306'
     $env:CMS_ACCEPTANCE_DB_DATABASE = 'cms_acceptance_test'
     $env:CMS_ACCEPTANCE_DB_USERNAME = 'cms_acceptance_user'
+    $env:CMS_ACCEPTANCE_DISPOSABLE_DATABASES = 'cms_acceptance_test'
+    if ($SkipGrantInspection) { $env:ACCEPTANCE_SKIP_GRANT_INSPECTION = '1' }
+    else { Remove-Item Env:ACCEPTANCE_SKIP_GRANT_INSPECTION -ErrorAction SilentlyContinue }
     $env:APP_ENV = 'testing'
     $env:DB_CONNECTION = 'mysql'
     $env:DB_HOST = $env:CMS_ACCEPTANCE_DB_HOST
@@ -55,18 +58,25 @@ try {
     Set-Location -LiteralPath $repo
     Set-Status 'preflight' 'Checking the isolated database and account grants.'
     $preflight = Invoke-Fixture 'preflight'
-    if ($preflight.safe -ne $true -or $preflight.table_count -ne 0) { throw 'Database preflight failed or the schema is not empty; nothing was migrated.' }
+    if ($preflight.safe -ne $true -or ($preflight.table_count -ne 0 -and $preflight.schema_ready -ne $true)) { throw 'Database preflight failed or the existing schema is incomplete; nothing was migrated.' }
     if (Test-Path -LiteralPath (Join-Path $repo 'public/hot')) { throw 'public/hot exists; stop Vite normally before acceptance.' }
-    Set-Status 'migration' 'Running normal migrations on the verified empty acceptance schema.'
-    $migrationOutput = & php artisan migrate --force 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) { throw 'Migration failed; the acceptance schema may be partially initialized. No automatic reset was attempted.' }
-    Set-Status 'permissions' 'Creating only the permissions required by the fixture.'
-    $seed = Invoke-Fixture 'seed-permissions'
-    if ($seed.seeded -ne $true) { throw 'Acceptance permission setup failed.' }
+    if ($preflight.table_count -eq 0) {
+        Set-Status 'migration' 'Running normal migrations on the verified empty acceptance schema.'
+        $migrationOutput = & php artisan migrate --force 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) { throw 'Migration failed; the acceptance schema may be partially initialized. No automatic reset was attempted.' }
+        Set-Status 'permissions' 'Creating only the permissions required by the fixture.'
+        $seed = Invoke-Fixture 'seed-permissions'
+        if ($seed.seeded -ne $true) { throw 'Acceptance permission setup failed.' }
+    }
     Set-Status 'acceptance' 'Running the real Laravel and Electron acceptance test.'
     Set-Location -LiteralPath $player
-    $testOutput = & npx.cmd playwright test tests/e2e/always-on-localhost.spec.js 2>&1 | Out-String
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $testOutput = & npx.cmd playwright test tests/e2e/always-on-localhost.spec.js 2>&1 | Out-String
+    } finally { $ErrorActionPreference = $previousPreference }
     if ($LASTEXITCODE -ne 0) { throw 'Real acceptance failed. Inspect local Playwright results after checking them for secrets.' }
+    if ($testOutput -notmatch '"realLaravel":true' -or $testOutput -notmatch '"realElectron":true') { throw 'Acceptance completed without expected evidence; result is inconclusive.' }
     Set-Status 'passed' 'Real Laravel and Electron acceptance passed. Installer build remains a separate verified step.'
     Write-Host 'Acceptance selesai. Status: passed.'
 } catch {
