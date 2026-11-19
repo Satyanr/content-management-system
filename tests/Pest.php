@@ -48,3 +48,13 @@ function something()
 {
     // ..
 }
+
+function dashboardUser(array $attributes = []): \App\Models\User
+{
+    \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'dashboard.view', 'guard_name' => 'web']);
+    $company = \App\Models\Company::create(['name' => 'Auth test company', 'code' => 'AUTH-'.\Illuminate\Support\Str::random(12), 'is_active' => true]);
+    $user = \App\Models\User::factory()->create(['company_id' => $company->id, ...$attributes]);
+    $user->givePermissionTo('dashboard.view');
+
+    return $user;
+}

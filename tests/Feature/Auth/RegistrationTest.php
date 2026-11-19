@@ -21,7 +21,10 @@ test('new users can register', function () {
 
     $component->call('register');
 
-    $component->assertRedirect(route('dashboard', absolute: false));
+    $component->assertRedirect(route('account.pending', absolute: false));
 
     $this->assertAuthenticated();
+    expect(auth()->user()->company_id)->toBeNull();
+    $this->get(route('account.pending'))->assertOk();
+    $this->get(route('admin.dashboard'))->assertForbidden();
 });

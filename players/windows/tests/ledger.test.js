@@ -92,7 +92,16 @@ test('unresponsive video is failed and the next item can play without consuming 
 
 test('video readiness detects a frozen decoder and resets after progress or a long renderer gap',()=>{
  const entry={node:{readyState:4,paused:false,seeking:false,currentTime:1}};
- for(let t=0;t<8000;t+=1000)assert.equal(videoReady(entry,t),true);
+ assert.equal(videoReady(entry,0),true);for(let t=1000;t<8000;t+=1000)assert.equal(videoReady(entry,t),false);
  assert.equal(videoReady(entry,8000),'error');entry.node.currentTime=2;assert.equal(videoReady(entry,9000),true);
  assert.equal(videoReady(entry,30000),true);entry.node.seeking=true;assert.equal(videoReady(entry,31000),false);entry.node.seeking=false;assert.equal(videoReady(entry,32000),true);
+});
+
+test('a frozen frame cannot complete a short video before the stall timeout',async()=>{
+ let now=0;const events=[],entry={node:{readyState:4,paused:false,seeking:false,currentTime:1}};
+ const item={id:1,type:'video',src:'frozen',available:true,duration:1};
+ const bridge={begin:async()=>({ok:true,value:1}),finish:async event=>{events.push(event);return {ok:true};},checkpoint:async()=>({ok:true})};
+ const engine=new DevicePlayback({pages:[{id:1,duration:30,zones:[{id:1,visible:true,z_index:0,items:[item]}]}]},{bridge,ready:()=>videoReady(entry,now),now:()=>now,raf:()=>1,cancel(){}});
+ engine.play();await engine.step();for(now=100;now<=9000;now+=100)await engine.step();
+ assert.equal(events.length,1);assert.equal(events[0].status,'failed');assert.ok(events[0].actual_played_ms<1000);await engine.destroy();
 });

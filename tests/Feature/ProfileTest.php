@@ -4,11 +4,11 @@ use App\Models\User;
 use Livewire\Volt\Volt;
 
 test('profile page is displayed', function () {
-    $user = User::factory()->create();
+    $user = dashboardUser();
 
     $this->actingAs($user);
 
-    $response = $this->get('/profile');
+    $response = $this->get(route('admin.profile'));
 
     $response
         ->assertOk()

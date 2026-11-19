@@ -20,6 +20,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::view('account/pending', 'auth.pending')->name('account.pending');
     Volt::route('verify-email', 'pages.auth.verify-email')
         ->name('verification.notice');
 

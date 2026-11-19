@@ -16,7 +16,7 @@ test('confirm password screen can be rendered', function () {
 });
 
 test('password can be confirmed', function () {
-    $user = User::factory()->create();
+    $user = dashboardUser();
 
     $this->actingAs($user);
 
@@ -26,7 +26,7 @@ test('password can be confirmed', function () {
     $component->call('confirmPassword');
 
     $component
-        ->assertRedirect('/dashboard')
+        ->assertRedirect('/admin/dashboard')
         ->assertHasNoErrors();
 });
 

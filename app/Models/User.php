@@ -32,4 +32,11 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Company::class);
     }
+
+    public function landingRoute(): string
+    {
+        return $this->can('dashboard.view') && ($this->hasRole('super-admin') || $this->company?->is_active)
+            ? 'admin.dashboard'
+            : 'account.pending';
+    }
 }

@@ -12,7 +12,7 @@ test('login screen can be rendered', function () {
 });
 
 test('users can authenticate using the login screen', function () {
-    $user = User::factory()->create();
+    $user = dashboardUser();
 
     $component = Volt::test('pages.auth.login')
         ->set('form.email', $user->email)
@@ -22,7 +22,7 @@ test('users can authenticate using the login screen', function () {
 
     $component
         ->assertHasNoErrors()
-        ->assertRedirect(route('dashboard', absolute: false));
+        ->assertRedirect(route('admin.dashboard', absolute: false));
 
     $this->assertAuthenticated();
 });
@@ -44,15 +44,23 @@ test('users can not authenticate with invalid password', function () {
 });
 
 test('navigation menu can be rendered', function () {
-    $user = User::factory()->create();
+    $user = dashboardUser();
 
     $this->actingAs($user);
 
-    $response = $this->get('/dashboard');
+    $response = $this->get(route('admin.dashboard'));
 
     $response
         ->assertOk()
-        ->assertSeeVolt('layout.navigation');
+        ->assertSee('Profil saya');
+});
+
+test('users without dashboard permission are directed to a safe status page', function () {
+    $user = User::factory()->create();
+    Volt::test('pages.auth.login')->set('form.email', $user->email)->set('form.password', 'password')->call('login')
+        ->assertHasNoErrors()->assertRedirect(route('account.pending', absolute: false));
+    $this->get(route('account.pending'))->assertOk()->assertSee('Akun menunggu akses');
+    $this->get(route('admin.dashboard'))->assertForbidden();
 });
 
 test('users can logout', function () {

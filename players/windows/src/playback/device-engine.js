@@ -7,7 +7,8 @@ export function videoReady(entry, now=performance.now()) {
     const previous=entry.progress, elapsed=previous ? now-previous.at : 0;
     const stalled=previous && elapsed>=0 && elapsed<=1000 && Math.abs(node.currentTime-previous.time)<0.001 ? previous.stalled+elapsed : 0;
     entry.progress={at:now,time:node.currentTime,stalled};
-    return stalled>=8000 ? 'error' : true;
+    // Do not credit a frozen frame as playback while waiting for the failure deadline.
+    return stalled>=8000 ? 'error' : stalled<250;
 }
 // Device-only sequencing: shared Preview keeps its independent, quota-free clock.
 export class DevicePlayback {
