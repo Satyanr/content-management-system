@@ -1,6 +1,28 @@
 # Windows Player — Phase 1.5 release candidate
 
-**Status: BLOCKED** untuk release candidate, 19 November 2026. Audit setelah perubahan administrator hanya menemukan USAGE global dan belum menemukan grant schema acceptance; akses schema ditolak. Clean install/upgrade dan soak 24–72 jam belum dibuktikan. Jangan gunakan akun terhadap data produksi atau menjalankan acceptance dengan bypass.
+**Status: PARTIAL**, 19 November 2026. Regresi terisolasi dan playback mock lulus; clean install/uninstall, upgrade nyata, dan soak 24–72 jam masih pending. Audit grant MySQL acceptance **DEFERRED** atas keputusan pengguna dan wajib diselesaikan sebelum deployment produksi.
+
+## Lanjutan tanpa database acceptance
+
+- Pengguna memutuskan menunda audit MySQL sampai tahap deployment server. Tidak ada audit grant baru, bypass autentikasi, koneksi atau fixture MySQL acceptance yang dijalankan pada lanjutan ini. Hasil Laravel–Electron Fase 1 adalah **baseline historis**, bukan bukti keamanan database terbaru. Sebelum produksi, administrator harus memastikan akun mempunyai hak literal hanya pada schema test, tanpa privilege global/role tambahan, dan audit serta preflight tanpa bypass harus lulus.
+- Hasil aktual: PHP **205/205** (1.227 assertion) memakai SQLite in-memory; JavaScript CMS **51/51**; Windows Player **43/43**; dua smoke Electron dengan API mock **2/2**. Build Vite berhasil. Pengujian ini tidak memerlukan database acceptance.
+- [mock-video-soak.mjs](../players/windows/scripts/mock-video-soak.mjs) menggunakan Device/API mock lokal, fixture H.264 Chromium dengan checksum terverifikasi, dan userData sementara baru. Uji terbaru 15 detik lulus: dua Window terpisah menampilkan video dan gambar, frame/waktu video bertambah, **13** completed video sebelum offline, restart offline berhasil, **9** event tertunda, **21** event unik diterima, dan **0** duplikasi. Uji 30 detik sebelumnya juga lulus dengan 27 completed sebelum offline dan 0 duplikasi. Hasil ini memakai mock, bukan Laravel terbaru atau perangkat signage dan **bukan soak 24–72 jam**. Sampel dan summary tersanitasi disimpan di direktori temp test yang dicetak oleh tool.
+- Windows Home Single Language terdeteksi; executable Windows Sandbox tidak ditemukan dan direktori userData Player sudah ada pada profil Windows. Instalasi/uninstall installer packaged pada profil ini dapat menyentuh registrasi atau userData existing. Tidak ada clean install, uninstall, atau upgrade yang dilakukan; jalankan prosedur VM bersih di bawah pada lingkungan terisolasi. Metadata `deleteAppDataOnUninstall=false` bukan bukti retensi setelah uninstall yang sesungguhnya.
+- Installer 2.0.0 Fase 1 tetap disimpan, tidak dipasang atau ditimpa. Versi 2.0.1 belum dibuat: perbedaan versi diperlukan untuk uji upgrade, tetapi penerbitan RC ditunda sampai acceptance installer yang diwajibkan tersedia. Tidak ada klaim code signing, reboot, power-loss atau uji hardware.
+- Fondasi dan kontrak yang perlu diikuti Android Player didokumentasikan di [android-player-foundation.md](android-player-foundation.md); belum ada aplikasi atau perubahan schema Android.
+
+Untuk mengulang uji mock pendek, sediakan fixture Chromium `bear.mp4` yang hash-nya sesuai dan jalankan dari `players/windows`:
+
+```powershell
+$env:CMS_TEST_VIDEO_PATH = '<path fixture bear.mp4>'
+node scripts/mock-video-soak.mjs --seconds=30
+```
+
+Tool menolak fixture dengan SHA-256 berbeda; tanpa variabel tersebut ia mencari salinan test lokal `storage/app/phase1-acceptance-bear.mp4`. Jangan gunakan media atau credential produksi. Untuk pengujian 24–72 jam pada Device khusus, gunakan `soak.mjs` sesuai petunjuk di bagian Recovery dan soak; durasi itu belum dijalankan.
+
+## Audit setelah grant database-level dilaporkan diberikan
+
+Audit read-only dicoba dua kali tanpa bypass setelah pengguna melaporkan grant schema diberikan. Kedua percobaan berhenti pada autentikasi dengan kode MySQL **1045**, sebelum `SHOW GRANTS` atau preflight dapat diperiksa. Kode ini tidak cukup untuk membedakan password, host akun, atau metode autentikasi; grant baru belum terverifikasi. Status audit sebelumnya diarsipkan, dan diagnostik hanya menyimpan kode driver tanpa password atau pesan koneksi mentah. Tidak ada migrasi, fixture, acceptance, reset database, atau penghapusan data operator pada percobaan ini. Pemeriksaan installer dan soak 24–72 jam tetap disiapkan dalam panduan di bawah dan belum dinyatakan lulus.
 
 ## Audit setelah perubahan privilege
 
