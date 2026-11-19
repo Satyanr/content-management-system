@@ -1,0 +1,45 @@
+# Windows Player — Phase 1.5 release candidate
+
+**Status: BLOCKED** untuk release candidate, 19 November 2026. Akun MySQL acceptance terbukti mempunyai hak global; clean install/upgrade dan soak 24–72 jam belum dibuktikan. Jangan gunakan akun itu terhadap data produksi dan jangan menjalankan acceptance baru dengan bypass sampai grant diperbaiki dan diaudit ulang.
+
+## Baseline dan hasil nyata
+
+- Branch `main`, HEAD awal `ba779b7c21c226de7374b4dfebefde7b7275c959`, working tree bersih. Fase 1 mencatat PHP 205/205, JS CMS 51/51, Player 41/41, dua smoke Electron dan satu acceptance Laravel–Electron lulus. Detail cakupan dan batasnya ada di [laporan Fase 1](stabilization-local-acceptance-phase1.md).
+- Audit read-only pada `127.0.0.1:3306` berhasil memverifikasi `DATABASE()`, `CURRENT_USER()` dan port terhadap `cms_acceptance_test` dan `cms_acceptance_user`. `partial_revokes` **OFF**; hasil `SHOW GRANTS` terklasifikasi **ALL PRIVILEGES pada `*.*`**. Ini hak global, sehingga persyaratan akses terbatas ke schema **FAIL**. Tidak ada password atau grant mentah disimpan di laporan.
+- Preflight tanpa bypass **FAIL** dengan guard grant yang ada. Penolakan terhadap privilege global benar dan tidak ditemukan bukti false positive yang membenarkan pelonggaran. Bypass sebelumnya diperlukan untuk acceptance Fase 1 atas permintaan pengguna, tetapi tidak membuktikan hak yang terbatas dan tidak disarankan digunakan lagi untuk release. Tidak ada grant atau database yang diubah pada audit ini. Minta administrator MySQL membatasi user khusus ke schema acceptance yang literal, tanpa hak global/role luas, lalu jalankan ulang audit dan preflight tanpa bypass. Periksa semua grant efektif, termasuk peran dan wildcard; jangan mengubah hak pada database CMS utama.
+- Script audit [acceptance-grant-audit.php](../tests/Browser/acceptance-grant-audit.php) dan [acceptance-grant-audit.ps1](../players/windows/scripts/acceptance-grant-audit.ps1) hanya membaca identitas, variabel dan grant. Password diminta sebagai SecureString dan diteruskan melalui environment proses; hasil tersanitasi disimpan lokal. Hasil ini bukan audit hak akun lain. File status lokal sebelumnya tidak ditimpa otomatis.
+- Installer Fase 1 tersedia di `players/windows/dist/phase1-acceptance/CMS-Signage-Player-2.0.0-x64-Setup.exe`; ukuran 121.511.406 byte, SHA-256 `5A9A5F8947200828E72841F747FD25616B5163A34CB7FECFFC2E1756F041A45D`, `NotSigned`. Metadata executable menunjukkan CMS Signage Player 2.0.0. DevicePlayback, renderer, shared renderer, manifest v2, ledger, dan cache dalam ASAR sama dengan source; kode packaged hanya mengizinkan bypass HTTP localhost saat `!app.isPackaged`. Ini inspeksi paket, bukan instalasi atau uji HTTPS live pada perangkat target.
+- Tes PHP lengkap **205/205** (1.227 assertion), Player dengan tooling baru **43/43**, tes guard PHP **16/16**, JS CMS **51/51**. Sampler soak dijalankan nyata selama **6 detik** pada Player tersembunyi, belum dipair, dengan userData sementara baru: menghasilkan sampel CPU/memori, status dan renderer load; tanpa video, heartbeat atau counter nyata. Ini hanya smoke tooling, **bukan soak 24 jam**, tidak membuktikan metrik pada Device terhubung.
+
+## Installer dan upgrade: prosedur manual pada VM bersih
+
+Semua langkah ini **PENDING**. Pakai snapshot/VM Windows dan akun Windows khusus acceptance; jangan memasang atau meng-uninstall di akun operator. Gunakan CMS HTTPS test, Device test dan media test. `--allow-localhost-http` hanya untuk Player unpackaged; installer packaged harus menggunakan HTTPS dengan sertifikat valid.
+
+1. Pastikan VM tidak memiliki instalasi Player atau userData operator. Catat snapshot, versi Windows, installer hash di atas, identitas akun Windows dan waktu mulai.
+2. Instal 2.0.0 secara interaktif. Periksa entri Start Menu, nama/versi, lokasi instalasi dan apakah aplikasi dapat dimulai dari shortcut. Jangan menganggap metadata paket sebagai bukti shortcut berhasil.
+3. Buat Device dan aktivasi khusus acceptance di CMS; pair menggunakan HTTPS. Periksa credential tersimpan terenkripsi dan tidak tampil di log. Tampilkan Playlist dengan dua Window, gambar dan video H.264, lalu periksa posisi, rasio, pergerakan frame, fullscreen dan kiosk. Periksa pengaturan PIN dengan akun test.
+4. Pada akun yang sama, tutup proses secara normal. Catat lokasi userData test, inventaris cache dan checksum file yang stabil setelah proses berhenti, termasuk `credentials.bin` dan `playback/playback.journal`; jangan membuka atau membagikan isi credential. Simpan salinan data test sebagai bukti di VM.
+5. Putuskan jaringan/server test dan buka Player lagi. Pastikan Playlist yang sudah tersinkron diputar, counter tidak mundur, dan event tertunda tetap ada. Nyalakan kembali server; pastikan heartbeat dan upload event diterima tanpa duplikasi. Bandingkan daftar event ID/counter di CMS test; jangan catat credential.
+6. Tutup Player, uninstall melalui Windows pada VM test. Periksa shortcut dan file aplikasi, lalu verifikasi userData test, credential, cache dan jurnal masih ada. Instal kembali dan periksa pairing/pemutaran offline serta sinkronisasi. Jangan menghapus userData untuk membuat tes terlihat bersih.
+7. Untuk upgrade versi yang sah, pasang build versi lama yang berbeda, pair dan kumpulkan state pada VM terpisah, kemudian instal build baru dan ulangi pemeriksaan retensi. Installer Fase 1 sebelumnya dan terbaru sama-sama **2.0.0**: reinstall antar keduanya tidak membuktikan upgrade versi. Uji upgrade 2.0.0 ke 2.0.1 baru dapat dilakukan setelah 2.0.1 dibangun.
+
+## Recovery dan soak
+
+Uji restart proses, logout/login Windows dengan autostart diaktifkan, putus/sambung jaringan, dan outage/restart Laravel test sebagai skenario terpisah. Catat waktu, Device, heartbeat server, jumlah event pending dan completed sebelum/sesudah tiap langkah. Bandingkan event ID setelah reconnect untuk mendeteksi duplikasi. Restart proses tidak membuktikan reboot OS; reboot Windows dan power-loss fisik tetap **PENDING** sampai benar-benar dilakukan pada perangkat fisik yang disiapkan.
+
+Tool [soak.mjs](../players/windows/scripts/soak.mjs) meluncurkan **Player unpackaged baru** dengan userData acak di direktori temp, tidak menempel pada Player operator, tidak menghapus userData, dan menulis `samples.jsonl` di direktori run yang dicetak saat start. Gunakan Device/Playlist/media khusus acceptance. Untuk jaringan production-like gunakan HTTPS; flag localhost hanya untuk development unpackaged.
+
+```powershell
+cd players/windows
+npm.cmd run prepare:shared
+node scripts/soak.mjs --seconds=86400 --interval=30
+# Untuk 72 jam: --seconds=259200
+```
+
+Pair Device test secara manual pada jendela yang muncul. Simpan dan amankan direktori run untuk analisis, hentikan dengan Ctrl+C bila diperlukan; tool menutup hanya Player yang diluncurkannya. Sampel mencakup CPU dan working set per proses Electron, item aktif dari sesi jurnal, jumlah pending dan completed per item/epoch, cache bytes, status sync, frame dan waktu video, perkiraan stall, renderer gone/load, serta heartbeat yang diamati **setelah instrumentasi terpasang**. Periode sebelum pairing/observer tidak dianggap heartbeat sehat. `stalled` adalah indikator sampel, bukan bukti visual frame hitam; ganti/reload elemen video mereset pembanding. Jurnal di atas 64 MiB atau saat tidak dapat dibaca ditandai unavailable, bukan dihitung nol. Counter dapat mencakup baseline server dan epoch berbeda; bandingkan juga di CMS. Nilai CPU yang tidak valid ditandai null.
+
+Sebelum soak, tentukan waktu mulai/akhir, media, Device dan ekspektasi batas putaran; kumpulkan sampel dan log server tersanitasi secara periodik. Periksa pertumbuhan memori, CPU, cache dan queue, perubahan frame, renderer restart, heartbeat dan event ganda. Jangan menyebutnya lulus kecuali durasi 24–72 jam benar-benar terpenuhi dan bukti diperiksa. Tidak ada soak panjang atau power-loss fisik yang telah dilakukan pada fase ini.
+
+## Keputusan versi dan release
+
+Versi patch **2.0.1 direkomendasikan** untuk membedakan artefak baru dan memungkinkan uji upgrade yang nyata dari 2.0.0. Versi source dan lockfile belum diubah serta installer RC belum dibangun, karena security grant dan installer acceptance masih blocked/pending. Setelah hak akun aman dan pemeriksaan installer/recovery yang diwajibkan lulus, ubah versi secara konsisten, jalankan regresi, build installer terpisah, verifikasi source ASAR/HTTPS dan checksum, lalu lakukan uji upgrade nyata. Code signing resmi masih pending; jangan menyebut installer signed sebelum sertifikat valid digunakan dan diverifikasi. Tidak ada release atau push otomatis.
