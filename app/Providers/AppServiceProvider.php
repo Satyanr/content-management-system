@@ -9,6 +9,7 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($proxy = config('demo.trusted_proxies')) {
+            TrustProxies::at(array_map('trim', explode(',', $proxy)));
+        }
+
         RateLimiter::for('device-activate', function (Request $request) {
             return [Limit::perMinute(5)->by('activate-ip:'.$request->ip()),
                 Limit::perMinute(5)->by('activate-code:'.hash('sha256', DeviceLifecycle::normalizeCode($request->input('activation_code'))))];

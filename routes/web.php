@@ -20,7 +20,16 @@ use App\Http\Controllers\Admin\WorkspaceController;
 use App\Services\PlaylistWorkspace;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', function () {
+    $url = config('player.windows_download_url');
+    $parts = is_string($url) ? parse_url($url) : false;
+    $downloadUrl = $parts && filter_var($url, FILTER_VALIDATE_URL)
+        && strtolower($parts['scheme'] ?? '') === 'https'
+        && ! isset($parts['user']) && ! isset($parts['pass'])
+        ? $url : null;
+
+    return view('welcome', compact('downloadUrl'));
+})->name('home');
 
 Route::middleware(['auth', 'verified', 'cms.maintenance', 'permission:dashboard.view', 'login.activity', 'company.active'])
     ->prefix('admin')
